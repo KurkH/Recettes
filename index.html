@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+  Historique des versions :
+  v1.0 — Base : recettes, ingrédients, liste de courses groupée
+  v1.1 — Photos sur les recettes, copier une recette individuelle
+  v1.2 — Catégories/rayons personnalisés, tri de la liste par rayon
+  v1.3 — Base d'ingrédients modifiable, articles libres dans la liste de courses
+  v1.4 — Modifier une recette, portions ajustables, recherche, export/import, tri des articles cochés
+  v1.5 — Favoris, duplication de recette
+  v1.6 — Navigation par onglets (Recettes / Courses / Réglages)
+-->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -88,6 +98,49 @@
     .wrap { grid-template-columns: 1fr; }
   }
 
+  /* ---------- TABS ---------- */
+  .tab-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    background: var(--cream);
+    padding: 14px 24px;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+
+  .tab-btn {
+    background: white;
+    border: 2px solid var(--pink-pale);
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--plum-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .tab-btn:hover { border-color: var(--pink); }
+  .tab-btn.active {
+    background: var(--pink-strong);
+    border-color: var(--pink-strong);
+    color: white;
+    box-shadow: 0 6px 14px var(--shadow);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.2s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   section.panel {
     background: var(--white);
     border-radius: 28px;
@@ -172,6 +225,7 @@
   }
 
   .icon-btn:hover { background: var(--pink); transform: scale(1.08); }
+  .icon-btn.active { background: var(--pink-strong); color: white; }
 
   #addIngBtn {
     background: var(--lavender);
@@ -238,6 +292,10 @@
     border-color: var(--pink-strong);
     background: var(--pink-pale);
   }
+
+  .recipe-card.favorite { box-shadow: 0 0 0 2px var(--pink-strong) inset; }
+
+  .fav-btn.is-fav { background: var(--pink-strong); color: white; }
 
   .recipe-card .top-row {
     display: flex;
@@ -481,7 +539,7 @@
   /* ---------- CATEGORY PANEL ---------- */
   .wrap-full {
     max-width: 1100px;
-    margin: 32px auto 0;
+    margin: 24px auto 0;
     padding: 0 24px;
   }
 
@@ -574,10 +632,22 @@
     font-weight: 600;
   }
 
+  .version-tag {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
   /* ---------- MOBILE ---------- */
   @media (max-width: 600px) {
     header { padding: 32px 16px 20px; }
     header p { font-size: 0.95rem; }
+
+    .tab-bar { padding: 10px 12px; gap: 6px; }
+    .tab-btn { padding: 9px 14px; font-size: 0.85rem; }
 
     .wrap { padding: 0 14px; gap: 20px; }
     .wrap-full { padding: 0 14px; margin-top: 20px; }
@@ -603,6 +673,8 @@
 
     .recipe-card .top-row { gap: 10px; }
     .recipe-card h3 { font-size: 1.05rem; }
+    .recipe-card .actions { flex-wrap: wrap; justify-content: flex-end; }
+    .recipe-card .icon-btn { width: 38px; height: 38px; }
 
     .primary-btn, .secondary-btn, .copy-btn, #addIngBtn {
       padding-top: 14px;
@@ -652,9 +724,15 @@
   <p>Ajoute tes recettes, coche-les, et hop — ta liste de courses ✨</p>
 </header>
 
-<div class="wrap">
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" data-tab="recipes" type="button">🍓 Recettes</button>
+  <button class="tab-btn" data-tab="shopping" type="button">🛍️ Courses</button>
+  <button class="tab-btn" data-tab="settings" type="button">⚙️ Réglages</button>
+</div>
 
-  <!-- LEFT: recipes -->
+<div class="tab-panel active" data-tab-panel="recipes">
+<div class="wrap-full">
+
   <section class="panel" id="recipesPanel">
     <h2>🍓 Mes recettes</h2>
 
@@ -689,14 +767,21 @@
     </div>
 
     <label for="recipeSearchInput" style="margin-top:26px;">🔍 Rechercher</label>
-    <input type="text" id="recipeSearchInput" placeholder="Nom de recette ou ingrédient...">
-
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="recipeSearchInput" placeholder="Nom de recette ou ingrédient..." style="flex-grow:1;">
+      <button class="icon-btn" id="favFilterBtn" type="button" title="Afficher uniquement les favoris" style="width:44px; height:44px; font-size:1.2rem; flex-shrink:0;">⭐</button>
+    </div>
 
     <h2 style="margin-top:30px;">📋 Liste</h2>
     <div id="recipeList"></div>
   </section>
 
-  <!-- RIGHT: shopping list -->
+</div>
+</div>
+
+<div class="tab-panel" data-tab-panel="shopping">
+<div class="wrap-full">
+
   <section class="panel">
     <h2>🛍️ Liste de courses</h2>
     <button class="primary-btn" id="generateBtn" type="button">✨ Générer depuis les recettes cochées</button>
@@ -710,12 +795,14 @@
     </div>
 
     <div id="shoppingList"></div>
-    <div id="shopEmpty" class="empty-note">Coche des recettes à gauche, ou ajoute un article libre !</div>
+    <div id="shopEmpty" class="empty-note">Coche des recettes dans l'onglet Recettes, ou ajoute un article libre !</div>
     <button class="secondary-btn" id="clearShopBtn" type="button" style="margin-top:16px;">Vider la liste</button>
   </section>
 
 </div>
+</div>
 
+<div class="tab-panel" data-tab-panel="settings">
 <div class="wrap-full">
   <section class="panel" style="margin-bottom:24px;">
     <h2>💾 Sauvegarde</h2>
@@ -747,8 +834,12 @@
     <div id="ingCategoryList" class="ing-cat-scroll"></div>
   </section>
 </div>
+</div>
 
-<footer>fait avec 🎀 pour un usage perso — tes données restent sur ton appareil</footer>
+<footer>
+  fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
+  <span class="version-tag">Version 1.6 — 20/09/2026</span>
+</footer>
 
 <script>
   const STORAGE_KEY = "cute_recipes_v1";
@@ -793,6 +884,7 @@
   let servingOverrides = {}; // ajustement de portions temporaire (non sauvegardé), id recette -> nb portions
   let expandedIds = new Set(); // cartes dont la liste ingrédients est dépliée
   let recipeSearchTerm = "";
+  let showFavoritesOnly = false;
 
   function getEffectiveServings(r) {
     return servingOverrides[r.id] || r.servings || 4;
@@ -1107,6 +1199,12 @@
     renderRecipes();
   });
 
+  document.getElementById("favFilterBtn").addEventListener("click", (e) => {
+    showFavoritesOnly = !showFavoritesOnly;
+    e.currentTarget.classList.toggle("active", showFavoritesOnly);
+    renderRecipes();
+  });
+
   function renderRecipes() {
     recipeList.innerHTML = "";
     if (recipes.length === 0) {
@@ -1115,22 +1213,31 @@
     }
 
     const term = recipeSearchTerm.trim().toLowerCase();
-    const filtered = term
+    let filtered = term
       ? recipes.filter(r =>
           r.name.toLowerCase().includes(term) ||
           r.ingredients.some(i => i.name.toLowerCase().includes(term))
         )
-      : recipes;
+      : recipes.slice();
+
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(r => r.favorite);
+    }
+
+    filtered.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
 
     if (filtered.length === 0) {
-      recipeList.innerHTML = `<div class="empty-note">Aucune recette ne correspond à "${escapeHtml(recipeSearchTerm)}" 🔍</div>`;
+      const msg = showFavoritesOnly
+        ? "Aucune recette favorite pour l'instant ⭐"
+        : `Aucune recette ne correspond à "${escapeHtml(recipeSearchTerm)}" 🔍`;
+      recipeList.innerHTML = `<div class="empty-note">${msg}</div>`;
       return;
     }
 
     filtered.forEach(r => {
       const eff = getEffectiveServings(r);
       const card = document.createElement("div");
-      card.className = "recipe-card" + (r.selected ? " selected" : "");
+      card.className = "recipe-card" + (r.selected ? " selected" : "") + (r.favorite ? " favorite" : "");
       card.innerHTML = `
         ${r.photo ? `<img class="thumb" src="${r.photo}" alt="${escapeHtml(r.name)}">` : ""}
         <div class="top-row">
@@ -1145,6 +1252,8 @@
             </div>
           </div>
           <div class="actions">
+            <button class="icon-btn fav-btn ${r.favorite ? "is-fav" : ""}" data-id="${r.id}" title="Favori">⭐</button>
+            <button class="icon-btn dup-btn" data-id="${r.id}" title="Dupliquer">⧉</button>
             <button class="icon-btn edit-btn" data-id="${r.id}" title="Modifier">✏️</button>
             <button class="icon-btn del-btn" data-id="${r.id}" title="Supprimer">🗑️</button>
           </div>
@@ -1182,6 +1291,34 @@
         const r = recipes.find(x => x.id === id);
         const next = Math.max(1, getEffectiveServings(r) + delta);
         servingOverrides[id] = next;
+        renderRecipes();
+      });
+    });
+
+    recipeList.querySelectorAll(".fav-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const r = recipes.find(x => x.id === id);
+        r.favorite = !r.favorite;
+        save();
+        renderRecipes();
+      });
+    });
+
+    recipeList.querySelectorAll(".dup-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const r = recipes.find(x => x.id === id);
+        const copy = JSON.parse(JSON.stringify(r));
+        copy.id = Date.now().toString();
+        copy.name = r.name + " (copie)";
+        copy.selected = false;
+        copy.favorite = false;
+        const idx = recipes.findIndex(x => x.id === id);
+        recipes.splice(idx + 1, 0, copy);
+        save();
         renderRecipes();
       });
     });
@@ -1468,6 +1605,17 @@
   renderManualCatOptions();
   renderRecipes();
   renderShopList();
+
+  // ---------- TABS ----------
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelector(`.tab-panel[data-tab-panel="${btn.dataset.tab}"]`).classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 </script>
 
 </body>

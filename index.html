@@ -8,6 +8,8 @@
   v1.4 — Modifier une recette, portions ajustables, recherche, export/import, tri des articles cochés
   v1.5 — Favoris, duplication de recette
   v1.6 — Navigation par onglets (Recettes / Courses / Réglages)
+  v1.7 — Fusion recette+manuel par nom (fin des doublons), onglet Bloc-notes (texte + ingrédients exportables), onglet Planning (Minette / Minou / Semaine)
+  v1.8 — Export du Planning vers la liste de courses (recalcul propre, pas de doublon même en ré-exportant)
 -->
 <html lang="fr">
 <head>
@@ -140,6 +142,69 @@
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* ---------- NOTEPAD ---------- */
+  .ing-tag-removable {
+    background: white;
+    border: 1.5px solid var(--pink);
+    border-radius: 999px;
+    padding: 4px 8px 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--plum-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---------- PLANNING ---------- */
+  .planning-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 18px;
+  }
+  @media (max-width: 860px) {
+    .planning-grid { grid-template-columns: 1fr; }
+  }
+
+  .planning-col {
+    background: var(--cream);
+    border-radius: 20px;
+    padding: 16px;
+  }
+  .planning-col h3 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .planning-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+    min-height: 20px;
+  }
+  .planning-entry {
+    background: white;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .planning-entry.is-recipe { border-left: 3px solid var(--pink-strong); }
+  .planning-entry .content { flex-grow: 1; word-break: break-word; }
+  .planning-col select,
+  .planning-col input[type="text"] { margin-bottom: 8px; }
+  .planning-col .add-note-row { display: flex; gap: 6px; }
+  .planning-col .add-note-row input { flex-grow: 1; margin-bottom: 0; }
 
   section.panel {
     background: var(--white);
@@ -727,6 +792,8 @@
 <div class="tab-bar" id="tabBar">
   <button class="tab-btn active" data-tab="recipes" type="button">🍓 Recettes</button>
   <button class="tab-btn" data-tab="shopping" type="button">🛍️ Courses</button>
+  <button class="tab-btn" data-tab="notepad" type="button">📝 Bloc-notes</button>
+  <button class="tab-btn" data-tab="planning" type="button">🗓️ Planning</button>
   <button class="tab-btn" data-tab="settings" type="button">⚙️ Réglages</button>
 </div>
 
@@ -802,6 +869,51 @@
 </div>
 </div>
 
+<div class="tab-panel" data-tab-panel="notepad">
+<div class="wrap-full">
+
+  <section class="panel" style="margin-bottom:24px;">
+    <h2>📝 Bloc-notes libre</h2>
+    <p class="small-desc">Écris ce que tu veux — un pense-bête, une idée de menu, une note pour plus tard. Sauvegardé automatiquement.</p>
+    <textarea id="notepadText" placeholder="Écris ici..." style="min-height:160px; margin-top:12px;"></textarea>
+  </section>
+
+  <section class="panel">
+    <h2>🧺 Ingrédients à mettre de côté</h2>
+    <p class="small-desc">Ajoute ici des ingrédients au fil de l'eau (pas liés à une recette), puis exporte-les vers ta liste de courses quand tu es prêt·e — sans créer de doublons.</p>
+
+    <div class="manual-add-row" style="grid-template-columns: 2fr 1fr 1fr auto; margin-top:14px;">
+      <input type="text" id="notepadIngName" list="ingDatalist" placeholder="Ex : farine">
+      <input type="number" id="notepadIngQty" placeholder="Qté" min="0" step="0.1">
+      <input type="text" id="notepadIngUnit" list="unitDatalist" placeholder="unité">
+      <button class="icon-btn" id="addNotepadIngBtn" type="button" title="Ajouter">+</button>
+    </div>
+
+    <div id="notepadIngList" class="cat-chip-list" style="margin-top:14px;"></div>
+    <div id="notepadIngEmpty" class="empty-note" style="padding:14px 0;">Rien pour l'instant</div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+      <button class="primary-btn" id="exportNotepadBtn" type="button" style="margin-top:0; width:auto; padding:12px 20px;">📤 Exporter vers la liste de courses</button>
+      <button class="secondary-btn" id="clearNotepadIngBtn" type="button" style="margin:0;">Vider</button>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="tab-panel" data-tab-panel="planning">
+<div class="wrap-full">
+  <section class="panel">
+    <h2>🗓️ Planning</h2>
+    <p class="small-desc">Organise tes semaines par personne ou par période — ajoute une recette de ta liste, ou écris librement.</p>
+
+    <button class="primary-btn" id="exportPlanningBtn" type="button" style="margin-top:14px; width:auto; padding:12px 20px;">📤 Exporter le planning vers la liste de courses</button>
+
+    <div class="planning-grid" id="planningGrid"></div>
+  </section>
+</div>
+</div>
+
 <div class="tab-panel" data-tab-panel="settings">
 <div class="wrap-full">
   <section class="panel" style="margin-bottom:24px;">
@@ -838,7 +950,7 @@
 
 <footer>
   fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 1.6 — 20/09/2026</span>
+  <span class="version-tag">Version 1.8 — 20/09/2026</span>
 </footer>
 
 <script>
@@ -847,6 +959,9 @@
   const ING_MASTER_KEY = "cute_ingredient_master_v1";
   const CATEGORY_KEY = "cute_categories_v1";
   const ING_CAT_KEY = "cute_ing_categories_v1";
+  const NOTEPAD_TEXT_KEY = "cute_notepad_text_v1";
+  const NOTEPAD_ING_KEY = "cute_notepad_ings_v1";
+  const PLANNING_KEY = "cute_planning_v1";
 
   const STARTER_INGREDIENTS = [
     "Pomme de terre", "Carotte", "Oignon", "Ail", "Échalote", "Poireau", "Courgette",
@@ -879,6 +994,8 @@
   let ingredientMaster = JSON.parse(localStorage.getItem(ING_MASTER_KEY) || "null") || [...STARTER_INGREDIENTS];
   let categories = JSON.parse(localStorage.getItem(CATEGORY_KEY) || "null") || ["Fruits & légumes", "Froid (frigo)", "Surgelés", "Féculents & épicerie", "Viande & poisson", "Boissons"];
   let ingCategoryMap = JSON.parse(localStorage.getItem(ING_CAT_KEY) || "{}");
+  let notepadIngredients = JSON.parse(localStorage.getItem(NOTEPAD_ING_KEY) || "[]");
+  let planningBoard = JSON.parse(localStorage.getItem(PLANNING_KEY) || "null") || { Minette: [], Minou: [], Semaine: [] };
 
   let editingRecipeId = null;
   let servingOverrides = {}; // ajustement de portions temporaire (non sauvegardé), id recette -> nb portions
@@ -1381,6 +1498,10 @@
         copyToClipboard(text, btn);
       });
     });
+
+    if (typeof renderPlanning === "function" && document.getElementById("planningGrid")) {
+      renderPlanning();
+    }
   }
 
   function copyToClipboard(text, btn) {
@@ -1412,33 +1533,65 @@
     done();
   }
 
+  // ---------- SHOPPING LIST MERGE ENGINE ----------
+  // Un article est identifié uniquement par son nom (insensible à la casse) : une "frite" de recette
+  // et une "frite" ajoutée à la main deviennent LA MÊME entrée, jamais un doublon.
+  function shopKey(name) { return name.trim().toLowerCase(); }
+  function shopId(key) { return "item_" + key.replace(/[^a-z0-9]+/g, "_"); }
+
+  function findOrCreateShopEntry(name, unit, category) {
+    const key = shopKey(name);
+    let entry = shopList.find(i => shopKey(i.name) === key);
+    if (!entry) {
+      entry = { id: shopId(key), name: name, unit: unit || "", category: category || "", recipeQty: 0, manualQty: 0, planningQty: 0, done: false };
+      shopList.push(entry);
+    } else {
+      if (!entry.unit && unit) entry.unit = unit;
+      if (!entry.category && category) entry.category = category;
+    }
+    return entry;
+  }
+
   document.getElementById("generateBtn").addEventListener("click", () => {
     const selected = recipes.filter(r => r.selected);
     if (selected.length === 0) {
       alert("Coche au moins une recette d'abord 🌷");
       return;
     }
-    const merged = {};
+    const computed = {};
     selected.forEach(r => {
       r.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase() + "|" + ing.unit.toLowerCase();
-        if (!merged[key]) {
-          merged[key] = { name: ing.name, qty: 0, unit: ing.unit, category: ingCategoryMap[ing.name.toLowerCase()] || "" };
+        const key = shopKey(ing.name);
+        if (!computed[key]) {
+          computed[key] = { name: ing.name, qty: 0, unit: ing.unit, category: ingCategoryMap[ing.name.toLowerCase()] || "" };
         }
-        merged[key].qty += scaleQty(ing.qty, r);
+        computed[key].qty += scaleQty(ing.qty, r);
+        if (!computed[key].unit && ing.unit) computed[key].unit = ing.unit;
       });
     });
-    // remplace uniquement les articles issus des recettes, garde les articles manuels intacts
-    const freshRecipeItems = Object.values(merged).map(i => ({
-      id: "recipe_" + i.name.toLowerCase() + "_" + i.unit.toLowerCase(),
-      name: i.name,
-      qty: i.qty,
-      unit: i.unit,
-      category: i.category,
-      source: "recipe",
-      done: false
-    }));
-    shopList = [...shopList.filter(item => item.source !== "recipe"), ...freshRecipeItems];
+
+    // met à jour la part "recette" de chaque article existant, remet à zéro celles qui ne sont plus cochées
+    shopList.forEach(entry => {
+      const key = shopKey(entry.name);
+      if (computed[key]) {
+        entry.recipeQty = computed[key].qty;
+        if (!entry.unit && computed[key].unit) entry.unit = computed[key].unit;
+        if (!entry.category && computed[key].category) entry.category = computed[key].category;
+        entry.done = false;
+      } else {
+        entry.recipeQty = 0;
+      }
+    });
+    // ajoute les articles de recette qui n'existaient pas encore dans la liste
+    Object.keys(computed).forEach(key => {
+      if (!shopList.some(i => shopKey(i.name) === key)) {
+        const c = computed[key];
+        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: c.qty, manualQty: 0, planningQty: 0, done: false });
+      }
+    });
+    // retire les articles totalement vides (plus de recette, jamais ajoutés à la main)
+    shopList = shopList.filter(i => (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+
     saveShop();
     renderShopList();
   });
@@ -1457,15 +1610,10 @@
     const name = nameInput.value.trim();
     if (!name) return;
 
-    shopList.push({
-      id: "manual_" + Date.now(),
-      name,
-      qty: parseFloat(qtyInput.value) || 0,
-      unit: "",
-      category: manualCatInput.value,
-      source: "manual",
-      done: false
-    });
+    const entry = findOrCreateShopEntry(name, "", manualCatInput.value);
+    entry.manualQty += parseFloat(qtyInput.value) || 0;
+    entry.done = false;
+    learnIngredient(name);
     saveShop();
     renderShopList();
 
@@ -1510,7 +1658,7 @@
         row.innerHTML = `
           <div class="checkbox-cute ${item.done ? "checked" : ""}" style="width:20px;height:20px;border-radius:6px;" data-id="${item.id}">${item.done ? "✓" : ""}</div>
           <span class="name">${escapeHtml(item.name)}</span>
-          <span class="qty">${item.qty ? formatQty(item.qty) : ""}${item.unit ? " " + escapeHtml(item.unit) : ""}</span>
+          <span class="qty">${((item.recipeQty || 0) + (item.manualQty || 0) + (item.planningQty || 0)) ? formatQty((item.recipeQty || 0) + (item.manualQty || 0) + (item.planningQty || 0)) : ""}${item.unit ? " " + escapeHtml(item.unit) : ""}</span>
           <button class="chip-remove remove-shop-item" type="button" data-id="${item.id}" title="Retirer">✕</button>
         `;
         row.querySelector(".checkbox-cute").addEventListener("click", () => {
@@ -1599,12 +1747,233 @@
     reader.readAsText(file);
   });
 
+  // ---------- BLOC-NOTES ----------
+  const notepadTextEl = document.getElementById("notepadText");
+  notepadTextEl.value = localStorage.getItem(NOTEPAD_TEXT_KEY) || "";
+  notepadTextEl.addEventListener("input", () => {
+    localStorage.setItem(NOTEPAD_TEXT_KEY, notepadTextEl.value);
+  });
+
+  function saveNotepadIngredients() {
+    localStorage.setItem(NOTEPAD_ING_KEY, JSON.stringify(notepadIngredients));
+  }
+
+  function renderNotepadIngredients() {
+    const el = document.getElementById("notepadIngList");
+    const emptyEl = document.getElementById("notepadIngEmpty");
+    if (notepadIngredients.length === 0) {
+      el.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+    el.innerHTML = notepadIngredients.map((i, idx) => `
+      <span class="ing-tag-removable">
+        ${escapeHtml(i.name)}${i.qty ? " · " + formatQty(i.qty) : ""}${i.unit ? " " + escapeHtml(i.unit) : ""}
+        <button class="chip-remove" type="button" data-idx="${idx}" title="Retirer">✕</button>
+      </span>
+    `).join("");
+    el.querySelectorAll(".chip-remove").forEach(btn => {
+      btn.addEventListener("click", () => {
+        notepadIngredients.splice(parseInt(btn.dataset.idx), 1);
+        saveNotepadIngredients();
+        renderNotepadIngredients();
+      });
+    });
+  }
+
+  document.getElementById("addNotepadIngBtn").addEventListener("click", () => {
+    const nameInput = document.getElementById("notepadIngName");
+    const qtyInput = document.getElementById("notepadIngQty");
+    const unitInput = document.getElementById("notepadIngUnit");
+    const name = nameInput.value.trim();
+    if (!name) return;
+    notepadIngredients.push({
+      name,
+      qty: parseFloat(qtyInput.value) || 0,
+      unit: unitInput.value.trim()
+    });
+    learnIngredient(name);
+    saveNotepadIngredients();
+    renderNotepadIngredients();
+    nameInput.value = "";
+    qtyInput.value = "";
+    unitInput.value = "";
+    nameInput.focus();
+  });
+
+  document.getElementById("clearNotepadIngBtn").addEventListener("click", () => {
+    if (notepadIngredients.length === 0) return;
+    if (!confirm("Vider cette liste d'ingrédients du bloc-notes ?")) return;
+    notepadIngredients = [];
+    saveNotepadIngredients();
+    renderNotepadIngredients();
+  });
+
+  document.getElementById("exportNotepadBtn").addEventListener("click", () => {
+    if (notepadIngredients.length === 0) {
+      alert("Rien à exporter pour l'instant 🌷");
+      return;
+    }
+    notepadIngredients.forEach(i => {
+      const entry = findOrCreateShopEntry(i.name, i.unit, ingCategoryMap[i.name.toLowerCase()] || "");
+      entry.manualQty += i.qty;
+      entry.done = false;
+    });
+    saveShop();
+    renderShopList();
+    notepadIngredients = [];
+    saveNotepadIngredients();
+    renderNotepadIngredients();
+    alert("Exporté vers ta liste de courses 🛍️");
+  });
+
+  // ---------- PLANNING ----------
+  const PLANNING_COLS = [
+    { key: "Minette", icon: "🐱" },
+    { key: "Minou", icon: "🐈" },
+    { key: "Semaine", icon: "🗓️" }
+  ];
+
+  function savePlanning() {
+    localStorage.setItem(PLANNING_KEY, JSON.stringify(planningBoard));
+  }
+
+  function renderPlanning() {
+    const grid = document.getElementById("planningGrid");
+    grid.innerHTML = PLANNING_COLS.map(col => `
+      <div class="planning-col" data-col="${col.key}">
+        <h3>${col.icon} ${col.key}</h3>
+        <div class="planning-entries" data-entries-for="${col.key}"></div>
+        <select data-recipe-select="${col.key}">
+          <option value="">+ ajouter une recette...</option>
+          ${recipes.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join("")}
+        </select>
+        <div class="add-note-row">
+          <input type="text" data-note-input="${col.key}" placeholder="Écrire une note libre...">
+          <button class="icon-btn" data-add-note="${col.key}" type="button" title="Ajouter">+</button>
+        </div>
+      </div>
+    `).join("");
+
+    PLANNING_COLS.forEach(col => {
+      const entriesEl = grid.querySelector(`[data-entries-for="${col.key}"]`);
+      const entries = planningBoard[col.key] || [];
+      entriesEl.innerHTML = entries.length
+        ? entries.map(e => `
+            <div class="planning-entry ${e.type === "recipe" ? "is-recipe" : ""}">
+              <span class="content">${e.type === "recipe" ? "🍓 " : "📝 "}${escapeHtml(e.content)}</span>
+              <button class="chip-remove" type="button" data-remove-entry="${col.key}|${e.id}" title="Retirer">✕</button>
+            </div>
+          `).join("")
+        : "";
+
+      entriesEl.querySelectorAll("[data-remove-entry]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const [colKey, id] = btn.dataset.removeEntry.split("|");
+          planningBoard[colKey] = planningBoard[colKey].filter(e => e.id !== id);
+          savePlanning();
+          renderPlanning();
+        });
+      });
+    });
+
+    grid.querySelectorAll("[data-recipe-select]").forEach(sel => {
+      sel.addEventListener("change", () => {
+        const colKey = sel.dataset.recipeSelect;
+        if (!sel.value) return;
+        const r = recipes.find(x => x.id === sel.value);
+        if (!r) return;
+        planningBoard[colKey].push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), type: "recipe", recipeId: r.id, content: r.name });
+        savePlanning();
+        renderPlanning();
+      });
+    });
+
+    grid.querySelectorAll("[data-add-note]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const colKey = btn.dataset.addNote;
+        const input = grid.querySelector(`[data-note-input="${colKey}"]`);
+        const text = input.value.trim();
+        if (!text) return;
+        planningBoard[colKey].push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), type: "text", content: text });
+        savePlanning();
+        renderPlanning();
+      });
+    });
+
+    grid.querySelectorAll("[data-note-input]").forEach(input => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          grid.querySelector(`[data-add-note="${input.dataset.noteInput}"]`).click();
+        }
+      });
+    });
+  }
+
+  document.getElementById("exportPlanningBtn").addEventListener("click", () => {
+    const recipeEntries = [];
+    PLANNING_COLS.forEach(col => {
+      (planningBoard[col.key] || []).forEach(e => {
+        if (e.type === "recipe") recipeEntries.push(e);
+      });
+    });
+
+    if (recipeEntries.length === 0) {
+      alert("Aucune recette dans le planning pour l'instant 🌷");
+      return;
+    }
+
+    const computed = {};
+    let missing = 0;
+    recipeEntries.forEach(e => {
+      const r = recipes.find(x => x.id === e.recipeId);
+      if (!r) { missing++; return; }
+      r.ingredients.forEach(ing => {
+        const key = shopKey(ing.name);
+        if (!computed[key]) {
+          computed[key] = { name: ing.name, qty: 0, unit: ing.unit, category: ingCategoryMap[ing.name.toLowerCase()] || "" };
+        }
+        computed[key].qty += scaleQty(ing.qty, r);
+        if (!computed[key].unit && ing.unit) computed[key].unit = ing.unit;
+      });
+    });
+
+    // recalcule la part "planning" de chaque article (remplace, n'additionne pas — pas de risque à re-exporter)
+    shopList.forEach(entry => {
+      const key = shopKey(entry.name);
+      if (computed[key]) {
+        entry.planningQty = computed[key].qty;
+        if (!entry.unit && computed[key].unit) entry.unit = computed[key].unit;
+        if (!entry.category && computed[key].category) entry.category = computed[key].category;
+        entry.done = false;
+      } else {
+        entry.planningQty = 0;
+      }
+    });
+    Object.keys(computed).forEach(key => {
+      if (!shopList.some(i => shopKey(i.name) === key)) {
+        const c = computed[key];
+        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: 0, manualQty: 0, planningQty: c.qty, done: false });
+      }
+    });
+    shopList = shopList.filter(i => (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+
+    saveShop();
+    renderShopList();
+    alert(missing > 0
+      ? `Exporté ! (${missing} recette${missing > 1 ? "s" : ""} du planning n'existe${missing > 1 ? "nt" : ""} plus et ${missing > 1 ? "ont" : "a"} été ignorée${missing > 1 ? "s" : ""})`
+      : "Planning exporté vers ta liste de courses 🛍️");
+  });
+
   renderDatalists();
   renderCategoryChips();
   renderIngCategoryList();
   renderManualCatOptions();
   renderRecipes();
   renderShopList();
+  renderNotepadIngredients();
+  renderPlanning();
 
   // ---------- TABS ----------
   document.querySelectorAll(".tab-btn").forEach(btn => {

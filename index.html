@@ -10,6 +10,7 @@
   v1.6 — Navigation par onglets (Recettes / Courses / Réglages)
   v1.7 — Fusion recette+manuel par nom (fin des doublons), onglet Bloc-notes (texte + ingrédients exportables), onglet Planning (Minette / Minou / Semaine)
   v1.8 — Export du Planning vers la liste de courses (recalcul propre, pas de doublon même en ré-exportant)
+  v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
 -->
 <html lang="fr">
 <head>
@@ -174,37 +175,63 @@
     padding: 16px;
   }
   .planning-col h3 {
-    margin: 0 0 10px;
+    margin: 0 0 12px;
     font-size: 1.1rem;
     display: flex;
     align-items: center;
     gap: 6px;
   }
-  .planning-entries {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
-    min-height: 20px;
+
+  .planning-day { margin-bottom: 14px; }
+  .planning-day:last-child { margin-bottom: 0; }
+  .planning-day-title {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    color: var(--plum);
+    font-size: 0.92rem;
+    margin-bottom: 6px;
+    padding-left: 2px;
   }
-  .planning-entry {
+
+  .planning-slot {
     background: white;
     border-radius: 14px;
-    padding: 10px 12px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    line-height: 1.4;
+    margin-bottom: 6px;
+    overflow: hidden;
   }
-  .planning-entry.is-recipe { border-left: 3px solid var(--pink-strong); }
-  .planning-entry .content { flex-grow: 1; word-break: break-word; }
-  .planning-col select,
-  .planning-col input[type="text"] { margin-bottom: 8px; }
-  .planning-col .add-note-row { display: flex; gap: 6px; }
-  .planning-col .add-note-row input { flex-grow: 1; margin-bottom: 0; }
+  .planning-slot.filled { border-left: 3px solid var(--pink-strong); }
+
+  .slot-summary {
+    padding: 9px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .slot-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--pink-strong-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .slot-recipe { font-size: 0.85rem; font-weight: 700; color: var(--plum); }
+  .slot-note { font-size: 0.82rem; font-weight: 500; color: var(--plum-soft); word-break: break-word; }
+  .slot-empty { font-size: 0.82rem; font-weight: 600; color: var(--plum-soft); font-style: italic; }
+
+  .slot-editor {
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+  .slot-editor select,
+  .slot-editor textarea { margin: 0; }
+  .slot-editor textarea { min-height: 60px; }
+  .slot-editor-actions { display: flex; gap: 8px; }
+  .slot-editor-actions .primary-btn {
+    margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem;
+  }
+  .slot-editor-actions .secondary-btn { padding: 9px 14px; font-size: 0.85rem; }
 
   section.panel {
     background: var(--white);
@@ -950,7 +977,7 @@
 
 <footer>
   fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 1.8 — 20/09/2026</span>
+  <span class="version-tag">Version 1.9 — 20/09/2026</span>
 </footer>
 
 <script>
@@ -995,7 +1022,7 @@
   let categories = JSON.parse(localStorage.getItem(CATEGORY_KEY) || "null") || ["Fruits & légumes", "Froid (frigo)", "Surgelés", "Féculents & épicerie", "Viande & poisson", "Boissons"];
   let ingCategoryMap = JSON.parse(localStorage.getItem(ING_CAT_KEY) || "{}");
   let notepadIngredients = JSON.parse(localStorage.getItem(NOTEPAD_ING_KEY) || "[]");
-  let planningBoard = JSON.parse(localStorage.getItem(PLANNING_KEY) || "null") || { Minette: [], Minou: [], Semaine: [] };
+  let planningBoard = JSON.parse(localStorage.getItem(PLANNING_KEY) || "null") || {};
 
   let editingRecipeId = null;
   let servingOverrides = {}; // ajustement de portions temporaire (non sauvegardé), id recette -> nb portions
@@ -1834,100 +1861,143 @@
     { key: "Minou", icon: "🐈" },
     { key: "Semaine", icon: "🗓️" }
   ];
+  const PLANNING_DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+  const PLANNING_SLOTS = [
+    { key: "midi", label: "🌞 Midi" },
+    { key: "soir", label: "🌙 Soir" }
+  ];
+  let planningOpenSlots = new Set(); // "Cat|Jour|slot" des cases actuellement ouvertes en édition
+
+  function emptyPlanningSlot() { return { recipeId: null, recipeName: "", note: "" }; }
+
+  function emptyPlanningCategory() {
+    const obj = {};
+    PLANNING_DAYS.forEach(day => {
+      obj[day] = { midi: emptyPlanningSlot(), soir: emptyPlanningSlot() };
+    });
+    return obj;
+  }
+
+  function ensurePlanningSchema() {
+    const valid = PLANNING_COLS.every(col =>
+      planningBoard[col.key] &&
+      PLANNING_DAYS.every(day => planningBoard[col.key][day] && planningBoard[col.key][day].midi && planningBoard[col.key][day].soir)
+    );
+    if (!valid) {
+      planningBoard = {};
+      PLANNING_COLS.forEach(col => { planningBoard[col.key] = emptyPlanningCategory(); });
+      savePlanning();
+    }
+  }
 
   function savePlanning() {
     localStorage.setItem(PLANNING_KEY, JSON.stringify(planningBoard));
   }
 
   function renderPlanning() {
+    ensurePlanningSchema();
     const grid = document.getElementById("planningGrid");
+
     grid.innerHTML = PLANNING_COLS.map(col => `
       <div class="planning-col" data-col="${col.key}">
         <h3>${col.icon} ${col.key}</h3>
-        <div class="planning-entries" data-entries-for="${col.key}"></div>
-        <select data-recipe-select="${col.key}">
-          <option value="">+ ajouter une recette...</option>
-          ${recipes.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join("")}
-        </select>
-        <div class="add-note-row">
-          <input type="text" data-note-input="${col.key}" placeholder="Écrire une note libre...">
-          <button class="icon-btn" data-add-note="${col.key}" type="button" title="Ajouter">+</button>
-        </div>
+        ${PLANNING_DAYS.map(day => `
+          <div class="planning-day">
+            <div class="planning-day-title">${day}</div>
+            ${PLANNING_SLOTS.map(s => renderPlanningSlot(col.key, day, s)).join("")}
+          </div>
+        `).join("")}
       </div>
     `).join("");
 
-    PLANNING_COLS.forEach(col => {
-      const entriesEl = grid.querySelector(`[data-entries-for="${col.key}"]`);
-      const entries = planningBoard[col.key] || [];
-      entriesEl.innerHTML = entries.length
-        ? entries.map(e => `
-            <div class="planning-entry ${e.type === "recipe" ? "is-recipe" : ""}">
-              <span class="content">${e.type === "recipe" ? "🍓 " : "📝 "}${escapeHtml(e.content)}</span>
-              <button class="chip-remove" type="button" data-remove-entry="${col.key}|${e.id}" title="Retirer">✕</button>
-            </div>
-          `).join("")
-        : "";
-
-      entriesEl.querySelectorAll("[data-remove-entry]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const [colKey, id] = btn.dataset.removeEntry.split("|");
-          planningBoard[colKey] = planningBoard[colKey].filter(e => e.id !== id);
-          savePlanning();
-          renderPlanning();
-        });
+    // ouvrir/fermer une case
+    grid.querySelectorAll(".slot-summary").forEach(el => {
+      el.addEventListener("click", () => {
+        const slotKey = el.dataset.slotKey;
+        const editor = grid.querySelector(`.slot-editor[data-slot-key="${slotKey}"]`);
+        const isOpen = planningOpenSlots.has(slotKey);
+        if (isOpen) { planningOpenSlots.delete(slotKey); editor.style.display = "none"; }
+        else { planningOpenSlots.add(slotKey); editor.style.display = "flex"; }
       });
     });
 
-    grid.querySelectorAll("[data-recipe-select]").forEach(sel => {
-      sel.addEventListener("change", () => {
-        const colKey = sel.dataset.recipeSelect;
-        if (!sel.value) return;
-        const r = recipes.find(x => x.id === sel.value);
-        if (!r) return;
-        planningBoard[colKey].push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), type: "recipe", recipeId: r.id, content: r.name });
-        savePlanning();
-        renderPlanning();
-      });
-    });
-
-    grid.querySelectorAll("[data-add-note]").forEach(btn => {
+    grid.querySelectorAll(".slot-save-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const colKey = btn.dataset.addNote;
-        const input = grid.querySelector(`[data-note-input="${colKey}"]`);
-        const text = input.value.trim();
-        if (!text) return;
-        planningBoard[colKey].push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), type: "text", content: text });
+        const [cat, day, slot] = btn.dataset.slotKey.split("|");
+        const editor = btn.closest(".slot-editor");
+        const select = editor.querySelector(".slot-recipe-select");
+        const textarea = editor.querySelector(".slot-note-input");
+        const r = select.value ? recipes.find(x => x.id === select.value) : null;
+        planningBoard[cat][day][slot] = {
+          recipeId: r ? r.id : null,
+          recipeName: r ? r.name : "",
+          note: textarea.value.trim()
+        };
         savePlanning();
+        planningOpenSlots.delete(btn.dataset.slotKey);
         renderPlanning();
       });
     });
 
-    grid.querySelectorAll("[data-note-input]").forEach(input => {
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          grid.querySelector(`[data-add-note="${input.dataset.noteInput}"]`).click();
-        }
+    grid.querySelectorAll(".slot-clear-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const [cat, day, slot] = btn.dataset.slotKey.split("|");
+        planningBoard[cat][day][slot] = emptyPlanningSlot();
+        savePlanning();
+        planningOpenSlots.delete(btn.dataset.slotKey);
+        renderPlanning();
       });
     });
   }
 
+  function renderPlanningSlot(cat, day, slotDef) {
+    const slotKey = `${cat}|${day}|${slotDef.key}`;
+    const data = planningBoard[cat][day][slotDef.key];
+    const hasContent = !!(data.recipeId || data.recipeName || data.note);
+    const isOpen = planningOpenSlots.has(slotKey);
+    return `
+      <div class="planning-slot ${hasContent ? "filled" : ""}">
+        <div class="slot-summary" data-slot-key="${slotKey}">
+          <div class="slot-label">${slotDef.label}</div>
+          ${data.recipeName ? `<span class="slot-recipe">🍓 ${escapeHtml(data.recipeName)}</span>` : ""}
+          ${data.note ? `<span class="slot-note">${escapeHtml(data.note)}</span>` : ""}
+          ${!hasContent ? `<span class="slot-empty">+ ajouter</span>` : ""}
+        </div>
+        <div class="slot-editor" data-slot-key="${slotKey}" style="display:${isOpen ? "flex" : "none"};">
+          <select class="slot-recipe-select">
+            <option value="">Aucune recette</option>
+            ${recipes.map(r => `<option value="${r.id}" ${r.id === data.recipeId ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
+          </select>
+          <textarea class="slot-note-input" placeholder="Note libre (courses, rappel...)">${escapeHtml(data.note)}</textarea>
+          <div class="slot-editor-actions">
+            <button class="primary-btn slot-save-btn" type="button" data-slot-key="${slotKey}">Enregistrer</button>
+            <button class="secondary-btn slot-clear-btn" type="button" data-slot-key="${slotKey}">Vider</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   document.getElementById("exportPlanningBtn").addEventListener("click", () => {
-    const recipeEntries = [];
+    const recipeRefs = [];
     PLANNING_COLS.forEach(col => {
-      (planningBoard[col.key] || []).forEach(e => {
-        if (e.type === "recipe") recipeEntries.push(e);
+      PLANNING_DAYS.forEach(day => {
+        PLANNING_SLOTS.forEach(s => {
+          const data = planningBoard[col.key][day][s.key];
+          if (data && data.recipeId) recipeRefs.push(data.recipeId);
+        });
       });
     });
 
-    if (recipeEntries.length === 0) {
+    if (recipeRefs.length === 0) {
       alert("Aucune recette dans le planning pour l'instant 🌷");
       return;
     }
 
     const computed = {};
     let missing = 0;
-    recipeEntries.forEach(e => {
-      const r = recipes.find(x => x.id === e.recipeId);
+    recipeRefs.forEach(recipeId => {
+      const r = recipes.find(x => x.id === recipeId);
       if (!r) { missing++; return; }
       r.ingredients.forEach(ing => {
         const key = shopKey(ing.name);

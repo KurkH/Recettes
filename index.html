@@ -11,6 +11,7 @@
   v1.7 — Fusion recette+manuel par nom (fin des doublons), onglet Bloc-notes (texte + ingrédients exportables), onglet Planning (Minette / Minou / Semaine)
   v1.8 — Export du Planning vers la liste de courses (recalcul propre, pas de doublon même en ré-exportant)
   v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
+  v2.0 — Planning en blocs créés à la demande : jour + créneau + recette/note au choix, modifiables et réordonnables (⬆️⬇️)
 -->
 <html lang="fr">
 <head>
@@ -193,45 +194,70 @@
     padding-left: 2px;
   }
 
-  .planning-slot {
+  .planning-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .planning-block {
     background: white;
     border-radius: 14px;
-    margin-bottom: 6px;
     overflow: hidden;
   }
-  .planning-slot.filled { border-left: 3px solid var(--pink-strong); }
+  .planning-block.filled { border-left: 3px solid var(--pink-strong); }
 
-  .slot-summary {
-    padding: 9px 12px;
+  .block-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .block-summary {
+    flex-grow: 1;
+    padding: 9px 4px 9px 12px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
   }
-  .slot-label {
+  .block-daytag {
     font-size: 0.68rem;
     font-weight: 800;
     color: var(--pink-strong-dark);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
+  .block-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 8px 8px 0;
+    flex-shrink: 0;
+  }
+  .block-actions .icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+  .block-actions .icon-btn:disabled { opacity: 0.25; cursor: default; }
+  .block-actions .icon-btn:disabled:hover { background: var(--pink-pale); transform: none; }
+
   .slot-recipe { font-size: 0.85rem; font-weight: 700; color: var(--plum); }
   .slot-note { font-size: 0.82rem; font-weight: 500; color: var(--plum-soft); word-break: break-word; }
   .slot-empty { font-size: 0.82rem; font-weight: 600; color: var(--plum-soft); font-style: italic; }
 
-  .slot-editor {
+  .block-editor {
     flex-direction: column;
     gap: 8px;
     padding: 0 12px 12px;
   }
-  .slot-editor select,
-  .slot-editor textarea { margin: 0; }
-  .slot-editor textarea { min-height: 60px; }
-  .slot-editor-actions { display: flex; gap: 8px; }
-  .slot-editor-actions .primary-btn {
-    margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem;
-  }
-  .slot-editor-actions .secondary-btn { padding: 9px 14px; font-size: 0.85rem; }
+  .block-editor select,
+  .block-editor textarea { margin: 0; }
+  .block-editor textarea { min-height: 60px; }
+  .block-editor .primary-btn { margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem; }
 
   section.panel {
     background: var(--white);
@@ -977,7 +1003,7 @@
 
 <footer>
   fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 1.9 — 20/09/2026</span>
+  <span class="version-tag">Version 2.0 — 20/09/2026</span>
 </footer>
 
 <script>
@@ -1863,29 +1889,22 @@
   ];
   const PLANNING_DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
   const PLANNING_SLOTS = [
-    { key: "midi", label: "🌞 Midi" },
-    { key: "soir", label: "🌙 Soir" }
+    { key: "midi", label: "Midi" },
+    { key: "soir", label: "Soir" }
   ];
-  let planningOpenSlots = new Set(); // "Cat|Jour|slot" des cases actuellement ouvertes en édition
+  let planningOpenBlocks = new Set(); // ids des blocs actuellement ouverts en édition
 
-  function emptyPlanningSlot() { return { recipeId: null, recipeName: "", note: "" }; }
+  function newBlockId() { return Date.now().toString() + Math.random().toString(36).slice(2, 6); }
 
-  function emptyPlanningCategory() {
-    const obj = {};
-    PLANNING_DAYS.forEach(day => {
-      obj[day] = { midi: emptyPlanningSlot(), soir: emptyPlanningSlot() };
-    });
-    return obj;
+  function emptyPlanningBlock() {
+    return { id: newBlockId(), day: PLANNING_DAYS[0], slot: PLANNING_SLOTS[0].key, recipeId: null, recipeName: "", note: "" };
   }
 
   function ensurePlanningSchema() {
-    const valid = PLANNING_COLS.every(col =>
-      planningBoard[col.key] &&
-      PLANNING_DAYS.every(day => planningBoard[col.key][day] && planningBoard[col.key][day].midi && planningBoard[col.key][day].soir)
-    );
+    const valid = PLANNING_COLS.every(col => Array.isArray(planningBoard[col.key]));
     if (!valid) {
       planningBoard = {};
-      PLANNING_COLS.forEach(col => { planningBoard[col.key] = emptyPlanningCategory(); });
+      PLANNING_COLS.forEach(col => { planningBoard[col.key] = []; });
       savePlanning();
     }
   }
@@ -1901,78 +1920,112 @@
     grid.innerHTML = PLANNING_COLS.map(col => `
       <div class="planning-col" data-col="${col.key}">
         <h3>${col.icon} ${col.key}</h3>
-        ${PLANNING_DAYS.map(day => `
-          <div class="planning-day">
-            <div class="planning-day-title">${day}</div>
-            ${PLANNING_SLOTS.map(s => renderPlanningSlot(col.key, day, s)).join("")}
-          </div>
-        `).join("")}
+        <div class="planning-blocks" data-blocks-for="${col.key}">
+          ${planningBoard[col.key].map((b, idx) => renderPlanningBlock(col.key, b, idx, planningBoard[col.key].length)).join("") || `<div class="empty-note" style="padding:10px 0;">Rien pour l'instant</div>`}
+        </div>
+        <button class="secondary-btn add-block-btn" type="button" data-cat="${col.key}" style="width:100%; margin-top:6px;">+ Ajouter un bloc</button>
       </div>
     `).join("");
 
-    // ouvrir/fermer une case
-    grid.querySelectorAll(".slot-summary").forEach(el => {
-      el.addEventListener("click", () => {
-        const slotKey = el.dataset.slotKey;
-        const editor = grid.querySelector(`.slot-editor[data-slot-key="${slotKey}"]`);
-        const isOpen = planningOpenSlots.has(slotKey);
-        if (isOpen) { planningOpenSlots.delete(slotKey); editor.style.display = "none"; }
-        else { planningOpenSlots.add(slotKey); editor.style.display = "flex"; }
-      });
-    });
-
-    grid.querySelectorAll(".slot-save-btn").forEach(btn => {
+    grid.querySelectorAll(".add-block-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const [cat, day, slot] = btn.dataset.slotKey.split("|");
-        const editor = btn.closest(".slot-editor");
-        const select = editor.querySelector(".slot-recipe-select");
-        const textarea = editor.querySelector(".slot-note-input");
-        const r = select.value ? recipes.find(x => x.id === select.value) : null;
-        planningBoard[cat][day][slot] = {
-          recipeId: r ? r.id : null,
-          recipeName: r ? r.name : "",
-          note: textarea.value.trim()
-        };
+        const cat = btn.dataset.cat;
+        const block = emptyPlanningBlock();
+        planningBoard[cat].push(block);
+        planningOpenBlocks.add(block.id);
         savePlanning();
-        planningOpenSlots.delete(btn.dataset.slotKey);
         renderPlanning();
       });
     });
 
-    grid.querySelectorAll(".slot-clear-btn").forEach(btn => {
+    // ouvrir/fermer un bloc
+    grid.querySelectorAll(".block-summary").forEach(el => {
+      el.addEventListener("click", () => {
+        const id = el.dataset.id;
+        const editor = grid.querySelector(`.block-editor[data-id="${id}"]`);
+        if (planningOpenBlocks.has(id)) { planningOpenBlocks.delete(id); editor.style.display = "none"; }
+        else { planningOpenBlocks.add(id); editor.style.display = "flex"; }
+      });
+    });
+
+    grid.querySelectorAll(".block-save-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const [cat, day, slot] = btn.dataset.slotKey.split("|");
-        planningBoard[cat][day][slot] = emptyPlanningSlot();
+        const { cat, id } = btn.dataset;
+        const editor = btn.closest(".block-editor");
+        const daySelect = editor.querySelector(".block-day-select");
+        const slotSelect = editor.querySelector(".block-slot-select");
+        const recipeSelect = editor.querySelector(".block-recipe-select");
+        const textarea = editor.querySelector(".block-note-input");
+        const r = recipeSelect.value ? recipes.find(x => x.id === recipeSelect.value) : null;
+        const block = planningBoard[cat].find(b => b.id === id);
+        block.day = daySelect.value;
+        block.slot = slotSelect.value;
+        block.recipeId = r ? r.id : null;
+        block.recipeName = r ? r.name : "";
+        block.note = textarea.value.trim();
         savePlanning();
-        planningOpenSlots.delete(btn.dataset.slotKey);
+        planningOpenBlocks.delete(id);
+        renderPlanning();
+      });
+    });
+
+    grid.querySelectorAll(".del-block-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const { cat, id } = btn.dataset;
+        planningBoard[cat] = planningBoard[cat].filter(b => b.id !== id);
+        planningOpenBlocks.delete(id);
+        savePlanning();
+        renderPlanning();
+      });
+    });
+
+    grid.querySelectorAll(".move-up-btn, .move-down-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const { cat, id } = btn.dataset;
+        const arr = planningBoard[cat];
+        const idx = arr.findIndex(b => b.id === id);
+        const delta = btn.classList.contains("move-up-btn") ? -1 : 1;
+        const swapIdx = idx + delta;
+        if (swapIdx < 0 || swapIdx >= arr.length) return;
+        [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+        savePlanning();
         renderPlanning();
       });
     });
   }
 
-  function renderPlanningSlot(cat, day, slotDef) {
-    const slotKey = `${cat}|${day}|${slotDef.key}`;
-    const data = planningBoard[cat][day][slotDef.key];
-    const hasContent = !!(data.recipeId || data.recipeName || data.note);
-    const isOpen = planningOpenSlots.has(slotKey);
+  function renderPlanningBlock(cat, block, idx, total) {
+    const hasContent = !!(block.recipeId || block.note);
+    const isOpen = planningOpenBlocks.has(block.id);
+    const slotLabel = (PLANNING_SLOTS.find(s => s.key === block.slot) || PLANNING_SLOTS[0]).label;
     return `
-      <div class="planning-slot ${hasContent ? "filled" : ""}">
-        <div class="slot-summary" data-slot-key="${slotKey}">
-          <div class="slot-label">${slotDef.label}</div>
-          ${data.recipeName ? `<span class="slot-recipe">🍓 ${escapeHtml(data.recipeName)}</span>` : ""}
-          ${data.note ? `<span class="slot-note">${escapeHtml(data.note)}</span>` : ""}
-          ${!hasContent ? `<span class="slot-empty">+ ajouter</span>` : ""}
-        </div>
-        <div class="slot-editor" data-slot-key="${slotKey}" style="display:${isOpen ? "flex" : "none"};">
-          <select class="slot-recipe-select">
-            <option value="">Aucune recette</option>
-            ${recipes.map(r => `<option value="${r.id}" ${r.id === data.recipeId ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
-          </select>
-          <textarea class="slot-note-input" placeholder="Note libre (courses, rappel...)">${escapeHtml(data.note)}</textarea>
-          <div class="slot-editor-actions">
-            <button class="primary-btn slot-save-btn" type="button" data-slot-key="${slotKey}">Enregistrer</button>
-            <button class="secondary-btn slot-clear-btn" type="button" data-slot-key="${slotKey}">Vider</button>
+      <div class="planning-block ${hasContent ? "filled" : ""}">
+        <div class="block-top">
+          <div class="block-summary" data-id="${block.id}">
+            <span class="block-daytag">${escapeHtml(block.day)} · ${escapeHtml(slotLabel)}</span>
+            ${block.recipeName ? `<span class="slot-recipe">🍓 ${escapeHtml(block.recipeName)}</span>` : ""}
+            ${block.note ? `<span class="slot-note">${escapeHtml(block.note)}</span>` : ""}
+            ${!hasContent ? `<span class="slot-empty">Clique pour remplir</span>` : ""}
           </div>
+          <div class="block-actions">
+            <button class="icon-btn move-up-btn" type="button" data-cat="${cat}" data-id="${block.id}" title="Monter" ${idx === 0 ? "disabled" : ""}>⬆️</button>
+            <button class="icon-btn move-down-btn" type="button" data-cat="${cat}" data-id="${block.id}" title="Descendre" ${idx === total - 1 ? "disabled" : ""}>⬇️</button>
+            <button class="icon-btn del-block-btn" type="button" data-cat="${cat}" data-id="${block.id}" title="Supprimer">🗑️</button>
+          </div>
+        </div>
+        <div class="block-editor" data-id="${block.id}" style="display:${isOpen ? "flex" : "none"};">
+          <select class="block-day-select">
+            ${PLANNING_DAYS.map(d => `<option value="${d}" ${d === block.day ? "selected" : ""}>${d}</option>`).join("")}
+          </select>
+          <select class="block-slot-select">
+            ${PLANNING_SLOTS.map(s => `<option value="${s.key}" ${s.key === block.slot ? "selected" : ""}>${s.label}</option>`).join("")}
+          </select>
+          <select class="block-recipe-select">
+            <option value="">Aucune recette</option>
+            ${recipes.map(r => `<option value="${r.id}" ${r.id === block.recipeId ? "selected" : ""}>${escapeHtml(r.name)}</option>`).join("")}
+          </select>
+          <textarea class="block-note-input" placeholder="Note libre (courses, rappel...)">${escapeHtml(block.note)}</textarea>
+          <button class="primary-btn block-save-btn" type="button" data-cat="${cat}" data-id="${block.id}">Enregistrer</button>
         </div>
       </div>
     `;
@@ -1981,11 +2034,8 @@
   document.getElementById("exportPlanningBtn").addEventListener("click", () => {
     const recipeRefs = [];
     PLANNING_COLS.forEach(col => {
-      PLANNING_DAYS.forEach(day => {
-        PLANNING_SLOTS.forEach(s => {
-          const data = planningBoard[col.key][day][s.key];
-          if (data && data.recipeId) recipeRefs.push(data.recipeId);
-        });
+      (planningBoard[col.key] || []).forEach(b => {
+        if (b.recipeId) recipeRefs.push(b.recipeId);
       });
     });
 

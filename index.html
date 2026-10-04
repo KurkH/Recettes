@@ -12,6 +12,7 @@
   v1.8 — Export du Planning vers la liste de courses (recalcul propre, pas de doublon même en ré-exportant)
   v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
   v2.0 — Planning en blocs créés à la demande : jour + créneau + recette/note au choix, modifiables et réordonnables (⬆️⬇️)
+  v2.1 — Autocomplétion corrigée sur "article libre", quantités modifiables directement dans la liste de courses (sans impact sur les recettes)
 -->
 <html lang="fr">
 <head>
@@ -619,6 +620,38 @@
   .shop-item span.name { font-weight: 700; flex-grow: 1; }
   .shop-item span.qty { font-size: 0.85rem; color: var(--pink-strong-dark); font-weight: 800; }
 
+  .qty-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .qty-display {
+    font-size: 0.85rem;
+    color: var(--pink-strong-dark);
+    font-weight: 800;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 8px;
+    border: 1.5px dashed transparent;
+  }
+  .qty-display:hover { border-color: var(--pink); }
+  .qty-edit-input {
+    width: 64px;
+    padding: 4px 6px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--pink-strong-dark);
+    border-radius: 8px;
+    border: 2px solid var(--pink-strong);
+    text-align: right;
+  }
+  .reset-qty-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--plum-soft);
+    padding: 0 2px;
+  }
+  .reset-qty-btn:hover { color: var(--pink-strong-dark); }
+  .qty-unit-tag { font-size: 0.75rem; color: var(--plum-soft); font-weight: 700; }
+
   .manual-add-row {
     display: grid;
     grid-template-columns: 2fr 0.8fr 1.3fr auto;
@@ -908,7 +941,7 @@
 
     <label for="manualItemInput" style="margin-top:20px;">Ajouter un article libre</label>
     <div class="manual-add-row">
-      <input type="text" id="manualItemInput" placeholder="Ex : PQ, lessive, gâteau...">
+      <input type="text" id="manualItemInput" list="ingDatalist" placeholder="Ex : PQ, lessive, gâteau...">
       <input type="number" id="manualQtyInput" placeholder="Qté" min="0" step="0.1">
       <select id="manualCatInput"></select>
       <button class="icon-btn" id="addManualBtn" type="button" title="Ajouter">+</button>
@@ -1003,7 +1036,7 @@
 
 <footer>
   fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 2.0 — 20/09/2026</span>
+  <span class="version-tag">Version 2.1 — 20/09/2026</span>
 </footer>
 
 <script>
@@ -1643,7 +1676,7 @@
       }
     });
     // retire les articles totalement vides (plus de recette, jamais ajoutés à la main)
-    shopList = shopList.filter(i => (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+    shopList = shopList.filter(i => (i.overrideQty !== null && i.overrideQty !== undefined) || (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
 
     saveShop();
     renderShopList();
@@ -1680,6 +1713,15 @@
     if (e.key === "Enter") document.getElementById("addManualBtn").click();
   });
 
+  let editingQtyIds = new Set(); // ids des articles dont la quantité est en cours d'édition manuelle
+
+  function computedShopQty(item) {
+    return (item.recipeQty || 0) + (item.manualQty || 0) + (item.planningQty || 0);
+  }
+  function displayedShopQty(item) {
+    return (item.overrideQty !== null && item.overrideQty !== undefined) ? item.overrideQty : computedShopQty(item);
+  }
+
   function renderShopList() {
     shoppingListEl.innerHTML = "";
     if (shopList.length === 0) {
@@ -1708,10 +1750,19 @@
       groups[cat].forEach(item => {
         const row = document.createElement("div");
         row.className = "shop-item" + (item.done ? " done" : "");
+        const hasOverride = item.overrideQty !== null && item.overrideQty !== undefined;
+        const displayedQty = displayedShopQty(item);
+        const isEditing = editingQtyIds.has(item.id);
+
+        const qtyHtml = isEditing
+          ? `<input type="number" class="qty-edit-input" data-id="${item.id}" value="${displayedQty || ""}" step="0.1" min="0">${item.unit ? `<span class="qty-unit-tag">${escapeHtml(item.unit)}</span>` : ""}`
+          : `<span class="qty-display" data-id="${item.id}" title="Clique pour modifier">${displayedQty ? formatQty(displayedQty) : "—"}${item.unit ? " " + escapeHtml(item.unit) : ""}</span>
+             ${hasOverride ? `<button class="reset-qty-btn" type="button" data-id="${item.id}" title="Revenir au calcul auto">↺</button>` : ""}`;
+
         row.innerHTML = `
           <div class="checkbox-cute ${item.done ? "checked" : ""}" style="width:20px;height:20px;border-radius:6px;" data-id="${item.id}">${item.done ? "✓" : ""}</div>
           <span class="name">${escapeHtml(item.name)}</span>
-          <span class="qty">${((item.recipeQty || 0) + (item.manualQty || 0) + (item.planningQty || 0)) ? formatQty((item.recipeQty || 0) + (item.manualQty || 0) + (item.planningQty || 0)) : ""}${item.unit ? " " + escapeHtml(item.unit) : ""}</span>
+          <span class="qty-wrap">${qtyHtml}</span>
           <button class="chip-remove remove-shop-item" type="button" data-id="${item.id}" title="Retirer">✕</button>
         `;
         row.querySelector(".checkbox-cute").addEventListener("click", () => {
@@ -1724,6 +1775,35 @@
           saveShop();
           renderShopList();
         });
+
+        if (isEditing) {
+          const input = row.querySelector(".qty-edit-input");
+          const commit = () => {
+            const val = parseFloat(input.value);
+            item.overrideQty = isNaN(val) ? null : val;
+            editingQtyIds.delete(item.id);
+            saveShop();
+            renderShopList();
+          };
+          input.addEventListener("blur", commit);
+          input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+        } else {
+          row.querySelector(".qty-display").addEventListener("click", () => {
+            editingQtyIds.add(item.id);
+            renderShopList();
+            const input = shoppingListEl.querySelector(`.qty-edit-input[data-id="${item.id}"]`);
+            if (input) { input.focus(); input.select(); }
+          });
+          const resetBtn = row.querySelector(".reset-qty-btn");
+          if (resetBtn) {
+            resetBtn.addEventListener("click", () => {
+              item.overrideQty = null;
+              saveShop();
+              renderShopList();
+            });
+          }
+        }
+
         shoppingListEl.appendChild(row);
       });
     });
@@ -2077,7 +2157,7 @@
         shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: 0, manualQty: 0, planningQty: c.qty, done: false });
       }
     });
-    shopList = shopList.filter(i => (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+    shopList = shopList.filter(i => (i.overrideQty !== null && i.overrideQty !== undefined) || (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
 
     saveShop();
     renderShopList();

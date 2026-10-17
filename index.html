@@ -13,6 +13,8 @@
   v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
   v2.0 — Planning en blocs créés à la demande : jour + créneau + recette/note au choix, modifiables et réordonnables (⬆️⬇️)
   v2.1 — Autocomplétion corrigée sur "article libre", quantités modifiables directement dans la liste de courses (sans impact sur les recettes)
+  v2.4 — Thème Halloween (noir/violet + chats), activable/désactivable dans Réglages
+  v2.3 — Vrai correctif export : les ingrédients sans quantité (sel, poivre...) ne disparaissent plus ; planning enregistré dès le choix de la recette
   v2.2 — Correctif : cliquer sur une quantité sans la modifier ne la fige plus (ça cassait l'export du planning, qui semblait aléatoire)
 -->
 <html lang="fr">
@@ -20,6 +22,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mes Recettes 🎀</title>
+<meta name="theme-color" content="#FFF8F3" id="themeColorMeta">
+<script>try{ if (localStorage.getItem("cute_theme_v1") !== "cute") document.documentElement.classList.add("halloween"); }catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -36,7 +40,51 @@
     --plum-soft: #7A6270;
     --white: #FFFFFF;
     --shadow: rgba(232, 92, 138, 0.18);
+    --surface: #FFFFFF;
+    --chip-x-bg: rgba(255,255,255,0.6);
+    --accent-text: #D14574;
+    --underline: #E85C8A;
   }
+
+  /* ---------- THÈME HALLOWEEN (activable dans Réglages) ---------- */
+  html.halloween {
+    color-scheme: dark;
+    --cream: #140d1f;
+    --cream-deep: #1c1329;
+    --pink-pale: #34254d;
+    --pink: #4a3470;
+    --pink-strong: #8f3fd6;
+    --pink-strong-dark: #7326b5;
+    --lavender: #2e2147;
+    --lavender-deep: #43306a;
+    --plum: #efe6ff;
+    --plum-soft: #b9a6d8;
+    --white: #21172f;
+    --surface: #2a1d3d;
+    --shadow: rgba(143, 63, 214, 0.30);
+    --chip-x-bg: rgba(255,255,255,0.14);
+    --accent-text: #d9b3ff;
+    --underline: #ff8c1a;
+  }
+  .hw-only, .hw-deco { display: none; }
+  html.halloween .hw-only { display: inline; }
+  html.halloween .hw-deco { display: inline-block; }
+  html.halloween .cute-only { display: none; }
+
+  .title-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
+  .hw-deco { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1; filter: drop-shadow(0 0 10px rgba(143,63,214,0.7)); }
+  .hw-deco.hw-right { transform: scaleX(-1); }
+  .hw-bat {
+    position: absolute; top: 18px; font-size: 1.3rem; opacity: 0.85;
+    animation: batFloat 5s ease-in-out infinite;
+  }
+  .hw-bat.b1 { left: 8%; }
+  .hw-bat.b2 { right: 10%; top: 40px; animation-delay: -2.2s; font-size: 1.05rem; }
+  html:not(.halloween) .hw-bat { display: none; }
+  @keyframes batFloat { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-9px) rotate(6deg); } }
+  @media (prefers-reduced-motion: reduce) { .hw-bat { animation: none; } }
+  header { position: relative; }
+  html.halloween h1 { text-shadow: 0 0 18px rgba(143,63,214,0.65); }
 
   * { box-sizing: border-box; }
 
@@ -77,6 +125,7 @@
   }
 
   .title-wrap svg.underline {
+    color: var(--underline);
     display: block;
     width: 100%;
     height: 14px;
@@ -120,7 +169,7 @@
   }
 
   .tab-btn {
-    background: white;
+    background: var(--surface);
     border: 2px solid var(--pink-pale);
     border-radius: 999px;
     padding: 10px 20px;
@@ -149,7 +198,7 @@
 
   /* ---------- NOTEPAD ---------- */
   .ing-tag-removable {
-    background: white;
+    background: var(--surface);
     border: 1.5px solid var(--pink);
     border-radius: 999px;
     padding: 4px 8px 4px 14px;
@@ -204,7 +253,7 @@
   }
 
   .planning-block {
-    background: white;
+    background: var(--surface);
     border-radius: 14px;
     overflow: hidden;
   }
@@ -228,7 +277,7 @@
   .block-daytag {
     font-size: 0.68rem;
     font-weight: 800;
-    color: var(--pink-strong-dark);
+    color: var(--accent-text);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
@@ -339,7 +388,7 @@
     justify-content: center;
     cursor: pointer;
     font-size: 1.1rem;
-    color: var(--pink-strong-dark);
+    color: var(--accent-text);
     transition: transform 0.12s ease, background 0.15s ease;
     flex-shrink: 0;
   }
@@ -389,7 +438,7 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  .secondary-btn:hover { border-color: var(--pink-strong); color: var(--pink-strong-dark); }
+  .secondary-btn:hover { border-color: var(--pink-strong); color: var(--accent-text); }
 
   /* ---------- RECIPE CARDS ---------- */
   #recipeList {
@@ -434,7 +483,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: white;
+    background: var(--surface);
     font-size: 0.9rem;
     color: white;
     user-select: none;
@@ -459,7 +508,7 @@
     align-items: center;
     gap: 8px;
     margin-top: 8px;
-    background: white;
+    background: var(--surface);
     border-radius: 999px;
     padding: 4px 6px;
   }
@@ -491,7 +540,7 @@
   }
 
   .ing-tag {
-    background: white;
+    background: var(--surface);
     border: 1.5px solid var(--pink);
     border-radius: 999px;
     padding: 3px 12px;
@@ -543,7 +592,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    background: white;
+    background: var(--surface);
     border: none;
     border-radius: 10px;
     width: 30px;
@@ -619,12 +668,12 @@
   .shop-item.done span.name { text-decoration: line-through; }
 
   .shop-item span.name { font-weight: 700; flex-grow: 1; }
-  .shop-item span.qty { font-size: 0.85rem; color: var(--pink-strong-dark); font-weight: 800; }
+  .shop-item span.qty { font-size: 0.85rem; color: var(--accent-text); font-weight: 800; }
 
   .qty-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .qty-display {
     font-size: 0.85rem;
-    color: var(--pink-strong-dark);
+    color: var(--accent-text);
     font-weight: 800;
     cursor: pointer;
     padding: 2px 6px;
@@ -637,7 +686,7 @@
     padding: 4px 6px;
     font-size: 0.85rem;
     font-weight: 800;
-    color: var(--pink-strong-dark);
+    color: var(--accent-text);
     border-radius: 8px;
     border: 2px solid var(--pink-strong);
     text-align: right;
@@ -650,7 +699,7 @@
     color: var(--plum-soft);
     padding: 0 2px;
   }
-  .reset-qty-btn:hover { color: var(--pink-strong-dark); }
+  .reset-qty-btn:hover { color: var(--accent-text); }
   .qty-unit-tag { font-size: 0.75rem; color: var(--plum-soft); font-weight: 700; }
 
   .manual-add-row {
@@ -678,7 +727,7 @@
 
   .shop-cat-header {
     font-family: 'Baloo 2', sans-serif;
-    color: var(--pink-strong-dark);
+    color: var(--accent-text);
     font-weight: 700;
     font-size: 0.98rem;
     margin: 18px 0 6px;
@@ -724,7 +773,7 @@
 
   .chip-remove {
     border: none;
-    background: rgba(255,255,255,0.6);
+    background: var(--chip-x-bg);
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -736,7 +785,7 @@
     align-items: center;
     justify-content: center;
   }
-  .chip-remove:hover { background: white; color: var(--pink-strong-dark); }
+  .chip-remove:hover { background: var(--surface); color: var(--accent-text); }
 
   .ing-cat-scroll {
     max-height: 340px;
@@ -867,13 +916,19 @@
 <body>
 
 <header>
-  <div class="title-wrap">
-    <h1>Mes Recettes</h1>
-    <svg class="underline" viewBox="0 0 300 14" preserveAspectRatio="none">
-      <path d="M2 8 Q 30 2, 58 8 T 114 8 T 170 8 T 226 8 T 282 8" stroke="#E85C8A" stroke-width="4" fill="none" stroke-linecap="round"/>
-    </svg>
+  <span class="hw-bat b1">🦇</span>
+  <span class="hw-bat b2">🦇</span>
+  <div class="title-row">
+    <span class="hw-deco" aria-hidden="true">🐈‍⬛</span>
+    <div class="title-wrap">
+      <h1>Mes Recettes</h1>
+      <svg class="underline" viewBox="0 0 300 14" preserveAspectRatio="none">
+        <path d="M2 8 Q 30 2, 58 8 T 114 8 T 170 8 T 226 8 T 282 8" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="hw-deco hw-right" aria-hidden="true">🐈‍⬛</span>
   </div>
-  <p>Ajoute tes recettes, coche-les, et hop — ta liste de courses ✨</p>
+  <p><span class="cute-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses ✨</span><span class="hw-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses 🎃 (sans fantômes 👻)</span></p>
 </header>
 
 <div class="tab-bar" id="tabBar">
@@ -1004,6 +1059,12 @@
 <div class="tab-panel" data-tab-panel="settings">
 <div class="wrap-full">
   <section class="panel" style="margin-bottom:24px;">
+    <h2>🎨 Thème</h2>
+    <p class="small-desc">Version spéciale Halloween : noir, violet et petits chats. Tu peux revenir au thème rose à tout moment.</p>
+    <button class="primary-btn" id="themeToggleBtn" type="button" style="margin-top:14px; width:auto; padding:12px 20px;"></button>
+  </section>
+
+  <section class="panel" style="margin-bottom:24px;">
     <h2>💾 Sauvegarde</h2>
     <p class="small-desc">Tout est stocké uniquement sur cet appareil. Exporte de temps en temps un fichier de sauvegarde pour ne rien perdre si tu changes de téléphone.</p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
@@ -1036,8 +1097,8 @@
 </div>
 
 <footer>
-  fait avec 🎀 pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 2.2 — 20/09/2026</span>
+  fait avec <span class="cute-only">🎀</span><span class="hw-only">🎃</span> pour un usage perso — tes données restent sur ton appareil
+  <span class="version-tag">Version 2.4 · Halloween — 18/10/2026</span>
 </footer>
 
 <script>
@@ -1626,11 +1687,30 @@
   function shopKey(name) { return name.trim().toLowerCase(); }
   function shopId(key) { return "item_" + key.replace(/[^a-z0-9]+/g, "_"); }
 
+  // Un article reste dans la liste tant qu'il vient d'au moins une source (recette, planning ou ajout manuel),
+  // même sans quantité chiffrée (sel, poivre, huile...).
+  function isShopEntryWanted(i) {
+    return !!(i.inRecipe || i.inPlanning || i.inManual) || (i.overrideQty !== null && i.overrideQty !== undefined);
+  }
+
+  // Migration des anciennes données (sans drapeaux de provenance)
+  function normalizeShopList() {
+    shopList.forEach(i => {
+      if (i.inRecipe === undefined && i.inPlanning === undefined && i.inManual === undefined) {
+        i.inRecipe = (i.recipeQty || 0) > 0;
+        i.inPlanning = (i.planningQty || 0) > 0;
+        i.inManual = (i.manualQty || 0) > 0;
+        if (!i.inRecipe && !i.inPlanning && !i.inManual) i.inManual = true;
+      }
+    });
+  }
+  normalizeShopList();
+
   function findOrCreateShopEntry(name, unit, category) {
     const key = shopKey(name);
     let entry = shopList.find(i => shopKey(i.name) === key);
     if (!entry) {
-      entry = { id: shopId(key), name: name, unit: unit || "", category: category || "", recipeQty: 0, manualQty: 0, planningQty: 0, done: false };
+      entry = { id: shopId(key), name: name, unit: unit || "", category: category || "", recipeQty: 0, manualQty: 0, planningQty: 0, inRecipe: false, inPlanning: false, inManual: false, done: false };
       shopList.push(entry);
     } else {
       if (!entry.unit && unit) entry.unit = unit;
@@ -1662,22 +1742,24 @@
       const key = shopKey(entry.name);
       if (computed[key]) {
         entry.recipeQty = computed[key].qty;
+        entry.inRecipe = true;
         if (!entry.unit && computed[key].unit) entry.unit = computed[key].unit;
         if (!entry.category && computed[key].category) entry.category = computed[key].category;
         entry.done = false;
       } else {
         entry.recipeQty = 0;
+        entry.inRecipe = false;
       }
     });
     // ajoute les articles de recette qui n'existaient pas encore dans la liste
     Object.keys(computed).forEach(key => {
       if (!shopList.some(i => shopKey(i.name) === key)) {
         const c = computed[key];
-        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: c.qty, manualQty: 0, planningQty: 0, done: false });
+        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: c.qty, manualQty: 0, planningQty: 0, inRecipe: true, inPlanning: false, inManual: false, done: false });
       }
     });
     // retire les articles totalement vides (plus de recette, jamais ajoutés à la main)
-    shopList = shopList.filter(i => (i.overrideQty !== null && i.overrideQty !== undefined) || (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+    shopList = shopList.filter(isShopEntryWanted);
 
     saveShop();
     renderShopList();
@@ -1699,6 +1781,7 @@
 
     const entry = findOrCreateShopEntry(name, "", manualCatInput.value);
     entry.manualQty += parseFloat(qtyInput.value) || 0;
+    entry.inManual = true;
     entry.done = false;
     learnIngredient(name);
     saveShop();
@@ -1864,6 +1947,7 @@
         ingredientMaster = Array.isArray(data.ingredientMaster) ? data.ingredientMaster : ingredientMaster;
         ingCategoryMap = (data.ingCategoryMap && typeof data.ingCategoryMap === "object") ? data.ingCategoryMap : {};
         shopList = Array.isArray(data.shopList) ? data.shopList : [];
+        normalizeShopList();
 
         save();
         saveCategories();
@@ -1962,6 +2046,7 @@
     notepadIngredients.forEach(i => {
       const entry = findOrCreateShopEntry(i.name, i.unit, ingCategoryMap[i.name.toLowerCase()] || "");
       entry.manualQty += i.qty;
+      entry.inManual = true;
       entry.done = false;
     });
     saveShop();
@@ -2060,6 +2145,39 @@
       });
     });
 
+    // sauvegarde immédiate : plus besoin de cliquer sur "Enregistrer" pour que la recette compte à l'export
+    grid.querySelectorAll(".block-editor").forEach(editor => {
+      const id = editor.dataset.id;
+      const findBlock = () => {
+        for (const col of PLANNING_COLS) {
+          const b = planningBoard[col.key].find(x => x.id === id);
+          if (b) return b;
+        }
+        return null;
+      };
+      editor.querySelectorAll(".block-day-select, .block-slot-select, .block-recipe-select").forEach(sel => {
+        sel.addEventListener("change", () => {
+          const block = findBlock();
+          if (!block) return;
+          block.day = editor.querySelector(".block-day-select").value;
+          block.slot = editor.querySelector(".block-slot-select").value;
+          const r = editor.querySelector(".block-recipe-select").value
+            ? recipes.find(x => x.id === editor.querySelector(".block-recipe-select").value) : null;
+          block.recipeId = r ? r.id : null;
+          block.recipeName = r ? r.name : "";
+          block.note = editor.querySelector(".block-note-input").value.trim();
+          savePlanning();
+          renderPlanning();
+        });
+      });
+      editor.querySelector(".block-note-input").addEventListener("input", (e) => {
+        const block = findBlock();
+        if (!block) return;
+        block.note = e.target.value.trim();
+        savePlanning();
+      });
+    });
+
     grid.querySelectorAll(".del-block-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const { cat, id } = btn.dataset;
@@ -2155,20 +2273,22 @@
       const key = shopKey(entry.name);
       if (computed[key]) {
         entry.planningQty = computed[key].qty;
+        entry.inPlanning = true;
         if (!entry.unit && computed[key].unit) entry.unit = computed[key].unit;
         if (!entry.category && computed[key].category) entry.category = computed[key].category;
         entry.done = false;
       } else {
         entry.planningQty = 0;
+        entry.inPlanning = false;
       }
     });
     Object.keys(computed).forEach(key => {
       if (!shopList.some(i => shopKey(i.name) === key)) {
         const c = computed[key];
-        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: 0, manualQty: 0, planningQty: c.qty, done: false });
+        shopList.push({ id: shopId(key), name: c.name, unit: c.unit, category: c.category, recipeQty: 0, manualQty: 0, planningQty: c.qty, inRecipe: false, inPlanning: true, inManual: false, done: false });
       }
     });
-    shopList = shopList.filter(i => (i.overrideQty !== null && i.overrideQty !== undefined) || (i.recipeQty + (i.manualQty || 0) + (i.planningQty || 0)) > 0.0001);
+    shopList = shopList.filter(isShopEntryWanted);
 
     saveShop();
     renderShopList();
@@ -2185,6 +2305,21 @@
   renderShopList();
   renderNotepadIngredients();
   renderPlanning();
+
+  // ---------- THÈME ----------
+  const THEME_KEY = "cute_theme_v1";
+  function applyTheme(theme) {
+    const hw = theme === "halloween";
+    document.documentElement.classList.toggle("halloween", hw);
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+    document.title = hw ? "Mes Recettes 🎃" : "Mes Recettes 🎀";
+    document.getElementById("themeColorMeta").setAttribute("content", hw ? "#140d1f" : "#FFF8F3");
+    document.getElementById("themeToggleBtn").textContent = hw ? "🎀 Revenir au thème rose" : "🎃 Activer le thème Halloween";
+  }
+  applyTheme(document.documentElement.classList.contains("halloween") ? "halloween" : "cute");
+  document.getElementById("themeToggleBtn").addEventListener("click", () => {
+    applyTheme(document.documentElement.classList.contains("halloween") ? "cute" : "halloween");
+  });
 
   // ---------- TABS ----------
   document.querySelectorAll(".tab-btn").forEach(btn => {

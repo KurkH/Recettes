@@ -13,6 +13,7 @@
   v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
   v2.0 — Planning en blocs créés à la demande : jour + créneau + recette/note au choix, modifiables et réordonnables (⬆️⬇️)
   v2.1 — Autocomplétion corrigée sur "article libre", quantités modifiables directement dans la liste de courses (sans impact sur les recettes)
+  v2.5 — Application installable (PWA) : icône, plein écran, mode hors connexion
   v2.4 — Thème Halloween (noir/violet + chats), activable/désactivable dans Réglages
   v2.3 — Vrai correctif export : les ingrédients sans quantité (sel, poivre...) ne disparaissent plus ; planning enregistré dès le choix de la recette
   v2.2 — Correctif : cliquer sur une quantité sans la modifier ne la fige plus (ça cassait l'export du planning, qui semblait aléatoire)
@@ -23,6 +24,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mes Recettes 🎀</title>
 <meta name="theme-color" content="#FFF8F3" id="themeColorMeta">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recettes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script>try{ if (localStorage.getItem("cute_theme_v1") !== "cute") document.documentElement.classList.add("halloween"); }catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -1059,6 +1067,17 @@
 <div class="tab-panel" data-tab-panel="settings">
 <div class="wrap-full">
   <section class="panel" style="margin-bottom:24px;">
+    <h2>📲 Application</h2>
+    <p class="small-desc" id="appStatusText">Installe le site comme une vraie appli : icône sur l'écran d'accueil, plein écran, et ça marche même sans connexion.</p>
+    <button class="primary-btn" id="installAppBtn" type="button" style="display:none; margin-top:14px; width:auto; padding:12px 20px;">📲 Installer l'application</button>
+    <p class="small-desc" id="installHelp" style="margin-top:12px;">
+      <b>Android (Chrome)</b> : menu ⋮ → « Installer l'application ».<br>
+      <b>iPhone (Safari)</b> : bouton Partager → « Sur l'écran d'accueil ».<br>
+      ⚠️ Sur iPhone, l'appli installée a son propre stockage : fais d'abord un <b>export</b> (Sauvegarde ci-dessous), puis un <b>import</b> dans l'appli.
+    </p>
+  </section>
+
+  <section class="panel" style="margin-bottom:24px;">
     <h2>🎨 Thème</h2>
     <p class="small-desc">Version spéciale Halloween : noir, violet et petits chats. Tu peux revenir au thème rose à tout moment.</p>
     <button class="primary-btn" id="themeToggleBtn" type="button" style="margin-top:14px; width:auto; padding:12px 20px;"></button>
@@ -1098,7 +1117,7 @@
 
 <footer>
   fait avec <span class="cute-only">🎀</span><span class="hw-only">🎃</span> pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 2.4 · Halloween — 18/10/2026</span>
+  <span class="version-tag">Version 2.5 · Halloween — 18/10/2026</span>
 </footer>
 
 <script>
@@ -2305,6 +2324,33 @@
   renderShopList();
   renderNotepadIngredients();
   renderPlanning();
+
+  // ---------- APPLICATION (PWA) ----------
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById("installAppBtn");
+  const isStandalone = window.matchMedia && (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
+  if (isStandalone) {
+    document.getElementById("appStatusText").textContent = "Tu utilises déjà l'application installée ✅";
+    document.getElementById("installHelp").style.display = "none";
+  }
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.style.display = "inline-block";
+  });
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.style.display = "none";
+  });
+  window.addEventListener("appinstalled", () => { installBtn.style.display = "none"; });
 
   // ---------- THÈME ----------
   const THEME_KEY = "cute_theme_v1";

@@ -13,6 +13,9 @@
   v1.9 — Planning refondu : chaque jour de la semaine (midi/soir) avec recette + note modifiables, pour Minette/Minou/Semaine
   v2.0 — Planning en blocs créés à la demande : jour + créneau + recette/note au choix, modifiables et réordonnables (⬆️⬇️)
   v2.1 — Autocomplétion corrigée sur "article libre", quantités modifiables directement dans la liste de courses (sans impact sur les recettes)
+  v2.8 — Semaines types du planning (enregistrer / charger / vider une colonne) ; la sauvegarde inclut enfin planning, semaines types et bloc-notes
+  v2.7 — Noël cocooning : fond sapin, panneaux vert/bordeaux, texte crème, lueur de cheminée, chats avec liseré
+  v2.6 — Thème Noël (rouge/vert/or, chats à bonnet, neige, guirlande) + sélecteur de thème à 3 choix ; réorganisation des rayons (liste de courses et Réglages)
   v2.5 — Application installable (PWA) : icône, plein écran, mode hors connexion
   v2.4 — Thème Halloween (noir/violet + chats), activable/désactivable dans Réglages
   v2.3 — Vrai correctif export : les ingrédients sans quantité (sel, poivre...) ne disparaissent plus ; planning enregistré dès le choix de la recette
@@ -31,7 +34,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Recettes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>try{ if (localStorage.getItem("cute_theme_v1") !== "cute") document.documentElement.classList.add("halloween"); }catch(e){}</script>
+<script>
+(function(){
+  var root = document.documentElement;
+  try {
+    var t = localStorage.getItem("cute_theme_v2");
+    if (!t) t = (localStorage.getItem("cute_theme_v1") === "cute") ? "cute" : "noel"; // migration : l'ancien défaut (Halloween) passe à Noël
+    if (t === "halloween" || t === "noel") root.classList.add(t);
+  } catch (e) { root.classList.add("noel"); }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -77,7 +89,7 @@
   .hw-only, .hw-deco { display: none; }
   html.halloween .hw-only { display: inline; }
   html.halloween .hw-deco { display: inline-block; }
-  html.halloween .cute-only { display: none; }
+  html.halloween .cute-only, html.noel .cute-only { display: none; }
 
   .title-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
   .hw-deco { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1; filter: drop-shadow(0 0 10px rgba(143,63,214,0.7)); }
@@ -93,6 +105,79 @@
   @media (prefers-reduced-motion: reduce) { .hw-bat { animation: none; } }
   header { position: relative; }
   html.halloween h1 { text-shadow: 0 0 18px rgba(143,63,214,0.65); }
+
+  /* ---------- THÈME NOËL (cute rouge / vert / or) ---------- */
+  html.noel {
+    color-scheme: dark;
+    --cream: #102B1E;          /* sapin très foncé : fond de page, champs, lignes */
+    --cream-deep: #163A29;
+    --pink-pale: #2F6049;      /* vert mousse : bordures, fonds doux */
+    --pink: #3F7258;
+    --pink-strong: #C9404D;    /* rouge Noël */
+    --pink-strong-dark: #A82F3C;
+    --lavender: #5E2230;       /* bordeaux : pastilles */
+    --lavender-deep: #7B2D3E;
+    --plum: #FFF1DC;           /* texte crème chaud */
+    --plum-soft: #C5D3BD;      /* sauge */
+    --white: #1A4030;          /* panneaux : vert épicéa */
+    --surface: #235239;        /* cartes dans les panneaux */
+    --shadow: rgba(0, 0, 0, 0.38);
+    --chip-x-bg: rgba(255, 241, 220, 0.14);
+    --accent-text: #FFD27A;    /* or chaud */
+    --underline: #F0B84A;
+  }
+  /* ambiance : lueur de cheminée (rouge/or) sur fond sapin */
+  html.noel body {
+    background-image:
+      radial-gradient(circle at 8% 6%, rgba(240, 184, 74, 0.17), transparent 38%),
+      radial-gradient(circle at 94% 90%, rgba(201, 64, 77, 0.26), transparent 42%),
+      radial-gradient(circle at 50% 120%, rgba(240, 184, 74, 0.10), transparent 50%);
+  }
+  html.noel .xm-block { display: block; }
+  .xm-only, .xm-deco, .xm-block { display: none; }
+  html.noel .xm-only { display: inline; }
+  html.noel .xm-deco { display: inline-block; }
+  .xm-cat { width: clamp(54px, 15vw, 80px); height: auto; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); }
+  .xm-deco.xm-right { transform: scaleX(-1); }
+  .xm-cozy { margin-top: 8px; font-size: 1.15rem; letter-spacing: 6px; opacity: 0.95; filter: drop-shadow(0 0 8px rgba(240, 184, 74, 0.35)); }
+  html.noel h1 { color: #FFF1DC; text-shadow: 2px 2px 0 #A82F3C, 0 0 22px rgba(240, 184, 74, 0.55); }
+  /* guirlande lumineuse */
+  html.noel header::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 24px; pointer-events: none;
+    background:
+      radial-gradient(circle at 12px 15px, #E0A83A 0 4.5px, transparent 5.5px) 0 0 / 72px 24px repeat-x,
+      radial-gradient(circle at 36px 15px, #2F7D5B 0 4.5px, transparent 5.5px) 0 0 / 72px 24px repeat-x,
+      radial-gradient(circle at 60px 15px, #C8374A 0 4.5px, transparent 5.5px) 0 0 / 72px 24px repeat-x,
+      linear-gradient(#9a8578, #9a8578) 0 7px / 100% 2px no-repeat;
+    filter: drop-shadow(0 0 5px rgba(255, 200, 110, 0.75));
+    animation: xmTwinkle 2.6s ease-in-out infinite;
+  }
+  @keyframes xmTwinkle { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+  /* barre "sucre d'orge" sous les onglets */
+  html.noel .tab-bar {
+    border-bottom: 6px solid transparent;
+    border-image: repeating-linear-gradient(135deg, #C9404D 0 10px, #F6EAD2 10px 20px) 1;
+  }
+  /* neige */
+  #snowLayer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; display: none; }
+  html.noel #snowLayer { display: block; }
+  .flake {
+    position: absolute; top: -8%; color: #F4F8FF; text-shadow: 0 0 5px rgba(255, 255, 255, 0.65); opacity: 0.85;
+    animation: snowFall linear infinite; will-change: transform;
+  }
+  @keyframes snowFall {
+    0% { transform: translate3d(0, -8vh, 0) rotate(0deg); }
+    100% { transform: translate3d(var(--drift, 30px), 108vh, 0) rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html.noel header::before { animation: none; }
+    #snowLayer { display: none !important; }
+  }
+
+  /* sélecteur de thème + bouton actif générique */
+  .secondary-btn.active { background: var(--pink-strong); color: #fff; border-color: var(--pink-strong); }
+  .theme-choices { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .theme-choice { flex: 1 1 auto; min-width: 104px; }
 
   * { box-sizing: border-box; }
 
@@ -317,6 +402,14 @@
   .block-editor textarea { margin: 0; }
   .block-editor textarea { min-height: 60px; }
   .block-editor .primary-btn { margin-top: 0; width: auto; padding: 9px 16px; font-size: 0.85rem; }
+
+  .planning-tools { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+  .planning-tools select { flex-grow: 1; min-width: 0; margin: 0; padding: 8px 10px; font-size: 0.85rem; }
+  .planning-tools .icon-btn { width: 38px; height: 38px; flex-shrink: 0; }
+  .planning-tools .icon-btn:disabled, .planning-tools select:disabled { opacity: 0.35; cursor: default; }
+  .planning-tools .icon-btn:disabled:hover { background: var(--pink-pale); transform: none; }
+  .tpl-label { font-size: 0.85rem; font-weight: 800; color: var(--plum-soft); margin-bottom: 8px; }
+  .tpl-count { opacity: 0.7; font-weight: 600; font-size: 0.8rem; }
 
   section.panel {
     background: var(--white);
@@ -745,6 +838,20 @@
   }
   .shop-cat-header:first-child { margin-top: 0; }
 
+  .cat-move-wrap { margin-left: auto; display: flex; gap: 4px; }
+  .cat-move {
+    width: 32px; height: 32px; border: none; border-radius: 10px; cursor: pointer;
+    background: var(--pink-pale); color: var(--accent-text); font-size: 0.85rem; font-weight: 800;
+  }
+  .cat-move:disabled { opacity: 0.3; cursor: default; }
+  .chip-move {
+    border: none; background: var(--chip-x-bg); border-radius: 50%; width: 22px; height: 22px;
+    cursor: pointer; font-size: 0.9rem; font-weight: 800; color: var(--plum-soft); line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .chip-move:hover:not(:disabled) { background: var(--surface); color: var(--accent-text); }
+  .chip-move:disabled { opacity: 0.25; cursor: default; }
+
   /* ---------- CATEGORY PANEL ---------- */
   .wrap-full {
     max-width: 1100px;
@@ -922,12 +1029,41 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="catSanta" viewBox="0 0 100 100">
+<g fill="#f3e3c3" stroke="#f3e3c3" stroke-width="5" stroke-linejoin="round">
+    <polygon points="17,54 18,22 44,38"/><polygon points="83,54 82,22 56,38"/><ellipse cx="50" cy="64" rx="35" ry="28"/>
+  </g>
+  <polygon points="17,54 18,22 44,38" fill="#241a2b"/>
+  <polygon points="83,54 82,22 56,38" fill="#241a2b"/>
+  <polygon points="22,48 22,30 36,40" fill="#f4a6b8"/>
+  <polygon points="78,48 78,30 64,40" fill="#f4a6b8"/>
+  <ellipse cx="50" cy="64" rx="35" ry="28" fill="#241a2b"/>
+  <ellipse cx="38" cy="65" rx="5.2" ry="6.8" fill="#ffb02e"/>
+  <ellipse cx="62" cy="65" rx="5.2" ry="6.8" fill="#ffb02e"/>
+  <ellipse cx="38" cy="65" rx="1.7" ry="6.4" fill="#120b17"/>
+  <ellipse cx="62" cy="65" rx="1.7" ry="6.4" fill="#120b17"/>
+  <circle cx="36.3" cy="62" r="1.5" fill="#fff"/>
+  <circle cx="60.3" cy="62" r="1.5" fill="#fff"/>
+  <polygon points="46.5,73 53.5,73 50,77.5" fill="#ff8fb7"/>
+  <path d="M50 77.5 L50 80 M50 80 Q46.5 84 43.5 80.5 M50 80 Q53.5 84 56.5 80.5" stroke="#f4a6b8" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <circle cx="28" cy="74" r="4.2" fill="#ff8fb7" opacity="0.45"/>
+  <circle cx="72" cy="74" r="4.2" fill="#ff8fb7" opacity="0.45"/>
+  <path d="M20 70 L5 67 M20 75 L6 79 M80 70 L95 67 M80 75 L94 79" stroke="#cdbbe6" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M25 44 C28 22 46 8 74 14 C66 21 71 31 76 44 Z" fill="#d6334a"/>
+  <path d="M25 44 C28 22 46 8 74 14 C70 17 68 20 67 23 C52 14 36 24 33 44 Z" fill="#e5485d" opacity="0.7"/>
+  <rect x="20" y="39" width="62" height="12" rx="6" fill="#ffffff" stroke="#efd3d7" stroke-width="1"/>
+  <circle cx="75" cy="14" r="7.5" fill="#ffffff" stroke="#efd3d7" stroke-width="1"/>
+  </symbol>
+</svg>
+<div id="snowLayer" aria-hidden="true"></div>
 
 <header>
   <span class="hw-bat b1">🦇</span>
   <span class="hw-bat b2">🦇</span>
   <div class="title-row">
     <span class="hw-deco" aria-hidden="true">🐈‍⬛</span>
+    <span class="xm-deco" aria-hidden="true"><svg class="xm-cat" viewBox="0 0 100 100"><use href="#catSanta"/></svg></span>
     <div class="title-wrap">
       <h1>Mes Recettes</h1>
       <svg class="underline" viewBox="0 0 300 14" preserveAspectRatio="none">
@@ -935,8 +1071,10 @@
       </svg>
     </div>
     <span class="hw-deco hw-right" aria-hidden="true">🐈‍⬛</span>
+    <span class="xm-deco xm-right" aria-hidden="true"><svg class="xm-cat" viewBox="0 0 100 100"><use href="#catSanta"/></svg></span>
   </div>
-  <p><span class="cute-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses ✨</span><span class="hw-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses 🎃 (sans fantômes 👻)</span></p>
+  <p><span class="cute-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses ✨</span><span class="hw-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses 🎃 (sans fantômes 👻)</span><span class="xm-only">Ajoute tes recettes, coche-les, et hop — ta liste de courses, bien au chaud 🎄</span></p>
+  <div class="xm-block xm-cozy" aria-hidden="true">🧦 🕯️ 🎄 ☕ 🍪 🧣</div>
 </header>
 
 <div class="tab-bar" id="tabBar">
@@ -1011,6 +1149,9 @@
       <button class="icon-btn" id="addManualBtn" type="button" title="Ajouter">+</button>
     </div>
 
+    <button class="secondary-btn" id="reorderCatsBtn" type="button" style="display:none; width:100%; margin-top:16px;">↕️ Réorganiser les rayons</button>
+    <p class="small-desc" id="reorderHint" style="display:none; margin-top:8px;">Utilise ▲ ▼ pour placer les rayons dans l'ordre de ton magasin. « Non classé » reste toujours en dernier.</p>
+
     <div id="shoppingList"></div>
     <div id="shopEmpty" class="empty-note">Coche des recettes dans l'onglet Recettes, ou ajoute un article libre !</div>
     <button class="secondary-btn" id="clearShopBtn" type="button" style="margin-top:16px;">Vider la liste</button>
@@ -1059,6 +1200,8 @@
 
     <button class="primary-btn" id="exportPlanningBtn" type="button" style="margin-top:14px; width:auto; padding:12px 20px;">📤 Exporter le planning vers la liste de courses</button>
 
+    <div id="planningTemplatesBox" style="margin-top:18px;"></div>
+
     <div class="planning-grid" id="planningGrid"></div>
   </section>
 </div>
@@ -1079,8 +1222,12 @@
 
   <section class="panel" style="margin-bottom:24px;">
     <h2>🎨 Thème</h2>
-    <p class="small-desc">Version spéciale Halloween : noir, violet et petits chats. Tu peux revenir au thème rose à tout moment.</p>
-    <button class="primary-btn" id="themeToggleBtn" type="button" style="margin-top:14px; width:auto; padding:12px 20px;"></button>
+    <p class="small-desc">Choisis l'ambiance du site. Les petits chats restent dans tous les thèmes.</p>
+    <div class="theme-choices">
+      <button class="secondary-btn theme-choice" type="button" data-theme="cute">🎀 Rose</button>
+      <button class="secondary-btn theme-choice" type="button" data-theme="halloween">🎃 Halloween</button>
+      <button class="secondary-btn theme-choice" type="button" data-theme="noel">🎄 Noël</button>
+    </div>
   </section>
 
   <section class="panel" style="margin-bottom:24px;">
@@ -1097,7 +1244,7 @@
 
   <section class="panel">
     <h2>🏷️ Rayons & catégories</h2>
-    <p class="small-desc">Crée tes propres rayons (Froid, Surgelés, Épicerie...) puis range chaque ingrédient dedans. Ta liste de courses sera ensuite triée par rayon automatiquement.</p>
+    <p class="small-desc">Crée tes propres rayons (Froid, Surgelés, Épicerie...) puis range chaque ingrédient dedans. Ta liste de courses sera ensuite triée par rayon automatiquement. Change leur ordre avec ‹ › (ou directement depuis la liste de courses).</p>
 
     <label for="newCatInput">Nouveau rayon</label>
     <div style="display:flex; gap:8px; align-items:flex-start;">
@@ -1116,8 +1263,8 @@
 </div>
 
 <footer>
-  fait avec <span class="cute-only">🎀</span><span class="hw-only">🎃</span> pour un usage perso — tes données restent sur ton appareil
-  <span class="version-tag">Version 2.5 · Halloween — 18/10/2026</span>
+  fait avec <span class="cute-only">🎀</span><span class="hw-only">🎃</span><span class="xm-only">🎄</span> pour un usage perso — tes données restent sur ton appareil
+  <span class="version-tag">Version 2.8 — 11/11/2026</span>
 </footer>
 
 <script>
@@ -1129,6 +1276,7 @@
   const NOTEPAD_TEXT_KEY = "cute_notepad_text_v1";
   const NOTEPAD_ING_KEY = "cute_notepad_ings_v1";
   const PLANNING_KEY = "cute_planning_v1";
+  const PLANNING_TPL_KEY = "cute_planning_templates_v1";
 
   const STARTER_INGREDIENTS = [
     "Pomme de terre", "Carotte", "Oignon", "Ail", "Échalote", "Poireau", "Courgette",
@@ -1163,6 +1311,7 @@
   let ingCategoryMap = JSON.parse(localStorage.getItem(ING_CAT_KEY) || "{}");
   let notepadIngredients = JSON.parse(localStorage.getItem(NOTEPAD_ING_KEY) || "[]");
   let planningBoard = JSON.parse(localStorage.getItem(PLANNING_KEY) || "null") || {};
+  let planningTemplates = JSON.parse(localStorage.getItem(PLANNING_TPL_KEY) || "[]"); // semaines types : { id, name, blocks[] }
 
   let editingRecipeId = null;
   let servingOverrides = {}; // ajustement de portions temporaire (non sauvegardé), id recette -> nb portions
@@ -1221,10 +1370,23 @@
       return;
     }
     el.innerHTML = categories.map(c => `
-      <span class="cat-chip">${escapeHtml(c)}
+      <span class="cat-chip">
+        <button class="chip-move" type="button" data-cat="${escapeHtml(c)}" data-dir="-1" title="Monter" ${categories.indexOf(c) === 0 ? "disabled" : ""}>‹</button>
+        ${escapeHtml(c)}
+        <button class="chip-move" type="button" data-cat="${escapeHtml(c)}" data-dir="1" title="Descendre" ${categories.indexOf(c) === categories.length - 1 ? "disabled" : ""}>›</button>
         <button class="chip-remove" type="button" data-cat="${escapeHtml(c)}" title="Supprimer ce rayon">✕</button>
       </span>
     `).join("");
+
+    el.querySelectorAll(".chip-move").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = categories.indexOf(btn.dataset.cat);
+        const j = i + parseInt(btn.dataset.dir);
+        if (i < 0 || j < 0 || j >= categories.length) return;
+        [categories[i], categories[j]] = [categories[j], categories[i]];
+        afterCategoriesReordered();
+      });
+    });
 
     el.querySelectorAll(".chip-remove").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1816,6 +1978,33 @@
     if (e.key === "Enter") document.getElementById("addManualBtn").click();
   });
 
+  let reorderMode = false;
+
+  function afterCategoriesReordered() {
+    saveCategories();
+    renderShopList();
+    renderCategoryChips();
+    renderManualCatOptions();
+    renderIngCategoryList(document.getElementById("ingSearchInput").value);
+  }
+
+  // déplace un rayon par rapport au rayon voisin *visible* dans la liste de courses
+  function moveCategory(cat, dir) {
+    const visible = categories.filter(c => shopList.some(i => i.category === c));
+    const idx = visible.indexOf(cat);
+    const neighbor = visible[idx + dir];
+    if (idx < 0 || !neighbor) return;
+    categories = categories.filter(c => c !== cat);
+    const nIdx = categories.indexOf(neighbor);
+    categories.splice(dir < 0 ? nIdx : nIdx + 1, 0, cat);
+    afterCategoriesReordered();
+  }
+
+  document.getElementById("reorderCatsBtn").addEventListener("click", () => {
+    reorderMode = !reorderMode;
+    renderShopList();
+  });
+
   let editingQtyIds = new Set(); // ids des articles dont la quantité est en cours d'édition manuelle
 
   function computedShopQty(item) {
@@ -1827,6 +2016,14 @@
 
   function renderShopList() {
     shoppingListEl.innerHTML = "";
+    const reorderBtn = document.getElementById("reorderCatsBtn");
+    const reorderHint = document.getElementById("reorderHint");
+    const movableCount = categories.filter(c => shopList.some(i => i.category === c)).length;
+    if (movableCount < 2) reorderMode = false;
+    reorderBtn.style.display = movableCount >= 2 ? "block" : "none";
+    reorderBtn.textContent = reorderMode ? "✅ Terminer" : "↕️ Réorganiser les rayons";
+    reorderBtn.classList.toggle("active", reorderMode);
+    reorderHint.style.display = reorderMode ? "block" : "none";
     if (shopList.length === 0) {
       shopEmpty.style.display = "block";
       return;
@@ -1847,7 +2044,22 @@
 
       const header = document.createElement("div");
       header.className = "shop-cat-header";
-      header.textContent = "🏷️ " + cat;
+      const label = document.createElement("span");
+      label.textContent = "🏷️ " + cat;
+      header.appendChild(label);
+      if (reorderMode && cat !== "Non classé") {
+        const movable = orderedCats.filter(c => c !== "Non classé");
+        const pos = movable.indexOf(cat);
+        const wrap = document.createElement("div");
+        wrap.className = "cat-move-wrap";
+        [["▲", -1, pos === 0, "Monter ce rayon"], ["▼", 1, pos === movable.length - 1, "Descendre ce rayon"]].forEach(([sym, dir, off, title]) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "cat-move"; b.textContent = sym; b.title = title; b.disabled = off;
+          b.addEventListener("click", () => moveCategory(cat, dir));
+          wrap.appendChild(b);
+        });
+        header.appendChild(wrap);
+      }
       shoppingListEl.appendChild(header);
 
       groups[cat].forEach(item => {
@@ -1937,7 +2149,11 @@
       categories,
       ingredientMaster,
       ingCategoryMap,
-      shopList
+      shopList,
+      planningBoard,
+      planningTemplates,
+      notepadText: localStorage.getItem(NOTEPAD_TEXT_KEY) || "",
+      notepadIngredients
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1953,7 +2169,7 @@
   document.getElementById("importInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) { return; }
-    if (!confirm("Importer ce fichier va remplacer toutes tes recettes, rayons, ingrédients et ta liste de courses actuels. Continuer ?")) {
+    if (!confirm("Importer ce fichier va remplacer tes recettes, rayons, ingrédients, liste de courses, planning et bloc-notes actuels. Continuer ?")) {
       e.target.value = "";
       return;
     }
@@ -1967,6 +2183,27 @@
         ingCategoryMap = (data.ingCategoryMap && typeof data.ingCategoryMap === "object") ? data.ingCategoryMap : {};
         shopList = Array.isArray(data.shopList) ? data.shopList : [];
         normalizeShopList();
+
+        // planning, semaines types et bloc-notes (absents des anciennes sauvegardes : on n'y touche pas dans ce cas)
+        if (data.planningBoard && typeof data.planningBoard === "object") {
+          planningBoard = data.planningBoard;
+          ensurePlanningSchema();
+          savePlanning();
+        }
+        if (Array.isArray(data.planningTemplates)) {
+          planningTemplates = data.planningTemplates.filter(t => t && t.name && Array.isArray(t.blocks));
+          savePlanningTemplates();
+        }
+        if (typeof data.notepadText === "string") {
+          notepadTextEl.value = data.notepadText;
+          localStorage.setItem(NOTEPAD_TEXT_KEY, data.notepadText);
+        }
+        if (Array.isArray(data.notepadIngredients)) {
+          notepadIngredients = data.notepadIngredients;
+          saveNotepadIngredients();
+          renderNotepadIngredients();
+        }
+        planningOpenBlocks = new Set();
 
         save();
         saveCategories();
@@ -1984,6 +2221,7 @@
         renderManualCatOptions();
         renderRecipes();
         renderShopList();
+        renderPlanning();
 
         alert("Importé avec succès 🎀");
       } catch (err) {
@@ -2108,6 +2346,103 @@
     localStorage.setItem(PLANNING_KEY, JSON.stringify(planningBoard));
   }
 
+  // ---------- SEMAINES TYPES ----------
+  function savePlanningTemplates() {
+    localStorage.setItem(PLANNING_TPL_KEY, JSON.stringify(planningTemplates));
+  }
+
+  // construit de nouveaux blocs à partir d'une semaine type ; relie les recettes qui existent encore
+  function blocksFromTemplate(tpl) {
+    let unlinked = 0;
+    const blocks = tpl.blocks.map(tb => {
+      const b = { id: newBlockId(), day: tb.day, slot: tb.slot, recipeId: null, recipeName: "", note: tb.note || "" };
+      if (tb.recipeId || tb.recipeName) {
+        const r = recipes.find(x => x.id === tb.recipeId)
+          || recipes.find(x => tb.recipeName && x.name.trim().toLowerCase() === tb.recipeName.trim().toLowerCase());
+        if (r) {
+          b.recipeId = r.id;
+          b.recipeName = r.name;
+        } else {
+          unlinked++;
+          b.note = (b.note ? b.note + " — " : "") + "🍓 " + (tb.recipeName || "recette") + " (recette introuvable)";
+        }
+      }
+      return b;
+    });
+    return { blocks, unlinked };
+  }
+
+  function saveWeekAsTemplate(cat) {
+    const list = planningBoard[cat] || [];
+    if (list.length === 0) return;
+    const name = (prompt("Nom de cette semaine type :", "Semaine type") || "").trim();
+    if (!name) return;
+    const blocks = list.map(b => ({ day: b.day, slot: b.slot, recipeId: b.recipeId, recipeName: b.recipeName, note: b.note }));
+    const existing = planningTemplates.find(t => t.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (!confirm("Une semaine type « " + existing.name + " » existe déjà. La remplacer ?")) return;
+      existing.blocks = blocks;
+    } else {
+      planningTemplates.push({ id: "tpl_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, blocks });
+    }
+    savePlanningTemplates();
+    renderPlanning();
+  }
+
+  function loadTemplateInto(cat, tplId) {
+    const tpl = planningTemplates.find(t => t.id === tplId);
+    if (!tpl) return false;
+    const current = planningBoard[cat] || [];
+    if (current.length > 0 && !confirm("Remplacer les " + current.length + " bloc" + (current.length > 1 ? "s" : "") + " de « " + cat + " » par la semaine type « " + tpl.name + " » ?")) {
+      return false;
+    }
+    current.forEach(b => planningOpenBlocks.delete(b.id));
+    const { blocks, unlinked } = blocksFromTemplate(tpl);
+    planningBoard[cat] = blocks;
+    savePlanning();
+    renderPlanning();
+    if (unlinked > 0) {
+      alert(unlinked + " recette" + (unlinked > 1 ? "s" : "") + " de cette semaine type " + (unlinked > 1 ? "n'existent" : "n'existe") + " plus : le nom a été gardé en note.");
+    }
+    return true;
+  }
+
+  function clearPlanningColumn(cat) {
+    const current = planningBoard[cat] || [];
+    if (current.length === 0) return;
+    if (!confirm("Vider les " + current.length + " bloc" + (current.length > 1 ? "s" : "") + " de « " + cat + " » ?")) return;
+    current.forEach(b => planningOpenBlocks.delete(b.id));
+    planningBoard[cat] = [];
+    savePlanning();
+    renderPlanning();
+  }
+
+  function renderPlanningTemplatesBox() {
+    const box = document.getElementById("planningTemplatesBox");
+    if (!box) return;
+    if (planningTemplates.length === 0) {
+      box.innerHTML = `<div class="tpl-label">📚 Mes semaines types</div>
+        <p class="small-desc" style="margin:0;">Aucune pour l'instant — remplis une colonne puis appuie sur 💾 pour en enregistrer une.</p>`;
+      return;
+    }
+    box.innerHTML = `<div class="tpl-label">📚 Mes semaines types</div>
+      <div class="cat-chip-list" style="margin-top:0;">
+        ${planningTemplates.map(t => `
+          <span class="cat-chip">${escapeHtml(t.name)} <span class="tpl-count">· ${t.blocks.length}</span>
+            <button class="chip-remove" type="button" data-tpl="${t.id}" title="Supprimer cette semaine type">✕</button>
+          </span>`).join("")}
+      </div>`;
+    box.querySelectorAll(".chip-remove").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const t = planningTemplates.find(x => x.id === btn.dataset.tpl);
+        if (!t || !confirm("Supprimer la semaine type « " + t.name + " » ?")) return;
+        planningTemplates = planningTemplates.filter(x => x.id !== t.id);
+        savePlanningTemplates();
+        renderPlanning();
+      });
+    });
+  }
+
   function renderPlanning() {
     ensurePlanningSchema();
     const grid = document.getElementById("planningGrid");
@@ -2115,12 +2450,31 @@
     grid.innerHTML = PLANNING_COLS.map(col => `
       <div class="planning-col" data-col="${col.key}">
         <h3>${col.icon} ${col.key}</h3>
+        <div class="planning-tools">
+          <select class="tpl-load-select" data-cat="${col.key}" ${planningTemplates.length ? "" : "disabled"}>
+            <option value="">${planningTemplates.length ? "📥 Charger une semaine type…" : "Aucune semaine type"}</option>
+            ${planningTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.blocks.length})</option>`).join("")}
+          </select>
+          <button class="icon-btn tpl-save-btn" type="button" data-cat="${col.key}" title="Enregistrer comme semaine type" ${planningBoard[col.key].length ? "" : "disabled"}>💾</button>
+          <button class="icon-btn tpl-clear-btn" type="button" data-cat="${col.key}" title="Vider cette colonne" ${planningBoard[col.key].length ? "" : "disabled"}>🧹</button>
+        </div>
         <div class="planning-blocks" data-blocks-for="${col.key}">
           ${planningBoard[col.key].map((b, idx) => renderPlanningBlock(col.key, b, idx, planningBoard[col.key].length)).join("") || `<div class="empty-note" style="padding:10px 0;">Rien pour l'instant</div>`}
         </div>
         <button class="secondary-btn add-block-btn" type="button" data-cat="${col.key}" style="width:100%; margin-top:6px;">+ Ajouter un bloc</button>
       </div>
     `).join("");
+
+    renderPlanningTemplatesBox();
+
+    grid.querySelectorAll(".tpl-load-select").forEach(sel => {
+      sel.addEventListener("change", () => {
+        if (!sel.value) return;
+        if (!loadTemplateInto(sel.dataset.cat, sel.value)) sel.value = "";
+      });
+    });
+    grid.querySelectorAll(".tpl-save-btn").forEach(btn => btn.addEventListener("click", () => saveWeekAsTemplate(btn.dataset.cat)));
+    grid.querySelectorAll(".tpl-clear-btn").forEach(btn => btn.addEventListener("click", () => clearPlanningColumn(btn.dataset.cat)));
 
     grid.querySelectorAll(".add-block-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -2353,19 +2707,48 @@
   window.addEventListener("appinstalled", () => { installBtn.style.display = "none"; });
 
   // ---------- THÈME ----------
-  const THEME_KEY = "cute_theme_v1";
-  function applyTheme(theme) {
-    const hw = theme === "halloween";
-    document.documentElement.classList.toggle("halloween", hw);
-    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
-    document.title = hw ? "Mes Recettes 🎃" : "Mes Recettes 🎀";
-    document.getElementById("themeColorMeta").setAttribute("content", hw ? "#140d1f" : "#FFF8F3");
-    document.getElementById("themeToggleBtn").textContent = hw ? "🎀 Revenir au thème rose" : "🎃 Activer le thème Halloween";
+  const THEME_KEY = "cute_theme_v2";
+  const THEMES = {
+    cute: { emoji: "🎀", color: "#FFF8F3" },
+    halloween: { emoji: "🎃", color: "#140d1f" },
+    noel: { emoji: "🎄", color: "#102B1E" }
+  };
+  function currentTheme() {
+    const c = document.documentElement.classList;
+    return c.contains("halloween") ? "halloween" : c.contains("noel") ? "noel" : "cute";
   }
-  applyTheme(document.documentElement.classList.contains("halloween") ? "halloween" : "cute");
-  document.getElementById("themeToggleBtn").addEventListener("click", () => {
-    applyTheme(document.documentElement.classList.contains("halloween") ? "cute" : "halloween");
+  function updateSnow(on) {
+    const layer = document.getElementById("snowLayer");
+    layer.innerHTML = "";
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!on || reduced) return;
+    for (let i = 0; i < 16; i++) {
+      const f = document.createElement("span");
+      f.className = "flake";
+      f.textContent = Math.random() > 0.35 ? "❄\uFE0E" : "❅\uFE0E";
+      f.style.left = (Math.random() * 100) + "%";
+      f.style.fontSize = (10 + Math.random() * 14) + "px";
+      f.style.animationDuration = (9 + Math.random() * 10) + "s";
+      f.style.animationDelay = (-Math.random() * 16) + "s";
+      f.style.setProperty("--drift", ((Math.random() - 0.5) * 80) + "px");
+      layer.appendChild(f);
+    }
+  }
+  function applyTheme(theme) {
+    if (!THEMES[theme]) theme = "noel";
+    const root = document.documentElement;
+    root.classList.toggle("halloween", theme === "halloween");
+    root.classList.toggle("noel", theme === "noel");
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+    document.title = "Mes Recettes " + THEMES[theme].emoji;
+    document.getElementById("themeColorMeta").setAttribute("content", THEMES[theme].color);
+    document.querySelectorAll(".theme-choice").forEach(b => b.classList.toggle("active", b.dataset.theme === theme));
+    updateSnow(theme === "noel");
+  }
+  document.querySelectorAll(".theme-choice").forEach(b => {
+    b.addEventListener("click", () => applyTheme(b.dataset.theme));
   });
+  applyTheme(currentTheme());
 
   // ---------- TABS ----------
   document.querySelectorAll(".tab-btn").forEach(btn => {
